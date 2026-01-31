@@ -63,6 +63,9 @@ class OddsWebSocketClient {
   private ws: WebSocket | null = null;
   private shouldReconnect = true;
   private reconnectTimeout: NodeJS.Timeout | null = null;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 10;
+  private pingInterval: NodeJS.Timeout | null = null;
 
   // In-memory odds store: eventId -> bookmaker -> markets
   public oddsStore: Map<string, Record<string, MarketOdds[]>> = new Map();
@@ -211,14 +214,38 @@ class OddsWebSocketClient {
   private startWs(): void {
     this.ws = new WebSocket(this.buildUrl());
 
-    this.ws.on('open', () => console.log('WebSocket connection opened'));
+    this.ws.on('open', () => {
+      console.log('WebSocket connection opened');
+      this.reconnectAttempts = 0; // Reset on successful connection
+
+      // Ping every 30s to keep connection alive and detect dead sockets
+      this.pingInterval = setInterval(() => {
+        if (this.ws?.readyState === WebSocket.OPEN) {
+          this.ws.ping();
+        }
+      }, 30000);
+    });
+
     this.ws.on('message', (data) => this.handleMessage(data));
     this.ws.on('error', (err) => console.error('WebSocket error:', err.message));
+
     this.ws.on('close', (code, reason) => {
       console.log(`Disconnected (code: ${code})`);
+      if (this.pingInterval) {
+        clearInterval(this.pingInterval);
+        this.pingInterval = null;
+      }
+
       if (this.shouldReconnect) {
-        console.log('Reconnecting in 5 seconds...');
-        this.reconnectTimeout = setTimeout(() => this.startWs(), 5000);
+        this.reconnectAttempts++;
+        if (this.reconnectAttempts > this.maxReconnectAttempts) {
+          console.log(`Max reconnect attempts (${this.maxReconnectAttempts}) reached. Giving up.`);
+          return;
+        }
+        // Exponential backoff: 1s, 2s, 4s, 8s... capped at 30s
+        const delay = Math.min(2 ** (this.reconnectAttempts - 1) * 1000, 30000);
+        console.log(`Reconnecting in ${delay / 1000}s (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+        this.reconnectTimeout = setTimeout(() => this.startWs(), delay);
       }
     });
   }
@@ -241,6 +268,10 @@ class OddsWebSocketClient {
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
+    }
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
     }
     if (this.ws) this.ws.close();
   }
