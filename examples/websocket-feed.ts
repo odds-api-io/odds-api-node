@@ -151,9 +151,21 @@ class OddsWebSocketClient {
   }
 
   private handleMessage(raw: WebSocket.Data): void {
-    try {
-      const data: WsMessage = JSON.parse(raw.toString());
+    // Server may send multiple JSON objects in a single frame (one per line)
+    const lines = raw.toString().trim().split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        this.handleParsed(JSON.parse(trimmed));
+      } catch (e: any) {
+        console.error('JSON parse error:', e.message);
+      }
+    }
+  }
 
+  private handleParsed(data: WsMessage): void {
+    try {
       switch (data.type) {
         case 'welcome':
           console.log('Connected to Odds-API WebSocket');

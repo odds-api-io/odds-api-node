@@ -86,8 +86,23 @@ function connectWs() {
   ws.on('open', () => console.log('WebSocket connection opened'));
 
   ws.on('message', (raw) => {
-    const data = JSON.parse(raw.toString());
+    // Server may send multiple JSON objects in a single frame (one per line)
+    const lines = raw.toString().trim().split('\n');
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      let data;
+      try {
+        data = JSON.parse(line.trim());
+      } catch (e) {
+        console.error('JSON parse error:', e.message);
+        continue;
+      }
+      handleMessage(data);
+    }
+  });
+}
 
+function handleMessage(data) {
     if (data.type === 'welcome') {
       console.log('Connected to Odds-API WebSocket');
       console.log(`  Bookmakers: ${data.bookmakers?.join(', ') || 'N/A'}`);
@@ -111,7 +126,7 @@ function connectWs() {
     } else if (data.type === 'deleted') {
       console.log(`[DELETED] Event ${data.id} | ${data.bookie}\n`);
     }
-  });
+}
 
   ws.on('error', (err) => console.error('WebSocket error:', err.message));
 
