@@ -17,7 +17,7 @@ import {
   GetParticipantsParams,
   GetArbitrageBetsParams,
   GetValueBetsParams,
-} from './types';
+} from './types.js';
 import {
   OddsAPIError,
   InvalidAPIKeyError,
@@ -25,7 +25,7 @@ import {
   NotFoundError,
   TimeoutError,
   NetworkError,
-} from './errors';
+} from './errors.js';
 
 const DEFAULT_BASE_URL = 'https://api2.odds-api.io/v3';
 const DEFAULT_TIMEOUT = 10000;

@@ -6,7 +6,7 @@
  * @packageDocumentation
  */
 
-export { OddsAPIClient } from './client';
+export { OddsAPIClient } from './client.js';
 
 export {
   OddsAPIError,
@@ -15,7 +15,7 @@ export {
   NotFoundError,
   TimeoutError,
   NetworkError,
-} from './errors';
+} from './errors.js';
 
 export type {
   OddsAPIClientConfig,
@@ -37,4 +37,4 @@ export type {
   GetParticipantsParams,
   GetArbitrageBetsParams,
   GetValueBetsParams,
-} from './types';
+} from './types.js';
