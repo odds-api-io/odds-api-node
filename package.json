@@ -1,0 +1,60 @@
+{
+  "name": "odds-api-io",
+  "version": "1.0.0",
+  "description": "Official Node.js SDK for Odds-API.io - Real-time sports betting odds from 250+ bookmakers",
+  "keywords": [
+    "odds",
+    "betting",
+    "sports",
+    "api",
+    "arbitrage",
+    "value-bets",
+    "bookmakers",
+    "odds-api"
+  ],
+  "author": "Odds-API.io",
+  "license": "MIT",
+  "homepage": "https://odds-api.io",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/odds-api-io/odds-api-node.git"
+  },
+  "bugs": {
+    "url": "https://github.com/odds-api-io/odds-api-node/issues"
+  },
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/types/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/types/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "npm run build:cjs && npm run build:esm && npm run build:types",
+    "build:cjs": "tsc --module commonjs --outDir dist/cjs",
+    "build:esm": "tsc --module esnext --outDir dist/esm",
+    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist/types",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
