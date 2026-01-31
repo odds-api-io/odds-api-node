@@ -10,7 +10,7 @@ async function main() {
   });
 
   try {
-    // Get upcoming NBA events
+    // Get NBA events
     const events = await client.getEvents({
       sport: 'basketball',
       league: 'usa-nba',
@@ -22,54 +22,70 @@ async function main() {
     }
 
     const event = events[0];
-    console.log(`Tracking odds for: ${event.homeParticipant.name} vs ${event.awayParticipant.name}`);
-    console.log(`Event ID: ${event.id}\n`);
+    console.log(`Tracking odds for: ${event.home} vs ${event.away}`);
+    console.log(`Event ID: ${event.id} | Status: ${event.status}\n`);
 
-    // Get current odds
+    // Get current odds from multiple bookmakers
     console.log('Current odds:');
     const odds = await client.getEventOdds({
       eventId: event.id,
-      bookmakers: 'pinnacle,bet365',
+      bookmakers: 'Bet365,SingBet',
     });
 
-    odds.markets.forEach((market) => {
-      console.log(`\n${market.market}:`);
-      market.outcomes.forEach((outcome) => {
-        console.log(`  ${outcome.name}: ${outcome.odds} @ ${outcome.bookmaker}`);
+    const bookmakers = odds.bookmakers || {};
+    for (const [bookie, markets] of Object.entries(bookmakers)) {
+      console.log(`\n  ${bookie}:`);
+      (markets as any[]).forEach((market: any) => {
+        const firstOdds = market.odds[0];
+        if (market.name === 'ML') {
+          console.log(`    ${market.name}: Home ${firstOdds.home} | Away ${firstOdds.away}`);
+        } else if (market.name === 'Totals') {
+          console.log(`    ${market.name} (${firstOdds.hdp}): Over ${firstOdds.over} | Under ${firstOdds.under}`);
+        } else if (market.name === 'Spread') {
+          console.log(`    ${market.name} (${firstOdds.hdp}): Home ${firstOdds.home} | Away ${firstOdds.away}`);
+        } else {
+          console.log(`    ${market.name}: ${JSON.stringify(firstOdds)}`);
+        }
       });
-    });
+    }
 
     // Get odds movement history
-    console.log('\n\nOdds movement for moneyline (Pinnacle):');
+    console.log('\n\nOdds movement (Bet365, ML):');
     try {
       const movements = await client.getOddsMovement({
         eventId: event.id,
-        bookmaker: 'pinnacle',
-        market: 'moneyline',
+        bookmaker: 'Bet365',
+        market: 'ML',
       });
 
-      console.log(`Found ${movements.movements.length} historical odds points`);
-      
-      // Show last 5 movements
-      const recent = movements.movements.slice(-5);
-      recent.forEach((movement) => {
-        const date = new Date(movement.timestamp);
-        console.log(`  ${date.toISOString()}: ${movement.odds}`);
-      });
-    } catch (error) {
-      console.log('No movement data available');
+      if (Array.isArray(movements) && movements.length > 0) {
+        const recent = movements.slice(-5);
+        recent.forEach((m: any) => {
+          console.log(`  ${m.updatedAt}: Home ${m.odds?.home} | Away ${m.odds?.away}`);
+        });
+      } else {
+        console.log('  No movement data available');
+      }
+    } catch {
+      console.log('  No movement data available');
     }
 
-    // Get updated odds since 1 hour ago
-    console.log('\n\nChecking for recent odds updates...');
-    const oneHourAgo = Date.now() - 3600000;
-    const updatedOdds = await client.getUpdatedOddsSince({
-      since: oneHourAgo,
-      bookmaker: 'pinnacle',
-      sport: 'basketball',
-    });
+    // Get recently updated odds
+    console.log('\nChecking for recent odds updates...');
+    try {
+      const oneHourAgo = Date.now() - 3600000;
+      const updatedOdds = await client.getUpdatedOddsSince({
+        since: oneHourAgo,
+        bookmaker: 'Bet365',
+        sport: 'basketball',
+      });
 
-    console.log(`${updatedOdds.length} events have updated odds in the last hour`);
+      if (Array.isArray(updatedOdds)) {
+        console.log(`${updatedOdds.length} events have updated odds in the last hour`);
+      }
+    } catch {
+      console.log('Could not fetch recent updates');
+    }
 
   } catch (error) {
     console.error('Error:', error);

@@ -5,7 +5,6 @@
 import { OddsAPIClient } from 'odds-api-io';
 
 async function main() {
-  // Initialize the client with your API key
   const client = new OddsAPIClient({
     apiKey: process.env.ODDS_API_KEY || 'your-api-key-here',
   });
@@ -14,12 +13,14 @@ async function main() {
     // Get all available sports
     console.log('Fetching sports...');
     const sports = await client.getSports();
-    console.log(`Found ${sports.length} sports:`, sports.map(s => s.name));
+    console.log(`Found ${sports.length} sports`);
+    sports.slice(0, 5).forEach(s => console.log(`  - ${s.name} (${s.slug})`));
 
-    // Get NBA leagues
+    // Get basketball leagues
     console.log('\nFetching basketball leagues...');
     const leagues = await client.getLeagues('basketball');
-    console.log('Leagues:', leagues.map(l => l.name));
+    console.log(`Found ${leagues.length} basketball leagues`);
+    leagues.slice(0, 5).forEach(l => console.log(`  - ${l.name} (${l.slug})`));
 
     // Get upcoming NBA events
     console.log('\nFetching NBA events...');
@@ -31,19 +32,23 @@ async function main() {
 
     if (events.length > 0) {
       const event = events[0];
-      console.log('\nFirst event:', {
-        id: event.id,
-        teams: `${event.homeParticipant.name} vs ${event.awayParticipant.name}`,
-        startTime: event.startTime,
-      });
+      console.log(`\nFirst event: ${event.home} vs ${event.away}`);
+      console.log(`  ID: ${event.id} | Date: ${event.date} | Status: ${event.status}`);
 
       // Get odds for this event
-      console.log('\nFetching odds for the event...');
+      console.log('\nFetching odds...');
       const odds = await client.getEventOdds({
         eventId: event.id,
-        bookmakers: 'pinnacle,bet365',
+        bookmakers: 'Bet365',
       });
-      console.log('Odds markets:', odds.markets.map(m => m.market));
+
+      const bookmakers = odds.bookmakers || {};
+      for (const [bookie, markets] of Object.entries(bookmakers)) {
+        console.log(`\n  ${bookie}:`);
+        (markets as any[]).slice(0, 3).forEach((market: any) => {
+          console.log(`    ${market.name}: ${JSON.stringify(market.odds[0])}`);
+        });
+      }
     }
 
     // Search for Lakers games
