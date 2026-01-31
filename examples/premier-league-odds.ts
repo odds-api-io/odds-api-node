@@ -1,80 +1,82 @@
 /**
  * Premier League Odds Example
- * 
- * This example demonstrates how to fetch odds for all upcoming
- * Premier League matches from multiple bookmakers.
+ *
+ * Fetch odds for all upcoming Premier League matches from multiple
+ * bookmakers, including direct bet links.
  */
 
 import { OddsAPIClient } from 'odds-api-io';
 
 async function main() {
-  // Initialize client with your API key
   const client = new OddsAPIClient({
-    apiKey: process.env.ODDS_API_KEY || 'your-api-key-here'
+    apiKey: process.env.ODDS_API_KEY || 'your-api-key-here',
   });
 
   try {
     console.log('Fetching Premier League events...\n');
 
-    // Get all upcoming Premier League events
     const events = await client.getEvents({
       sport: 'football',
-      league: 'england-premier-league'
+      league: 'england-premier-league',
     });
 
-    if (!events || events.length === 0) {
-      console.log('No upcoming Premier League events found.');
-      return;
-    }
+    // Filter for pending/live events
+    const activeEvents = events.filter(
+      (e: any) => e.status === 'pending' || e.status === 'live'
+    );
 
-    // Filter for pending events only
-    const pendingEvents = events.filter(e => e.status === 'pending');
-
-    console.log(`Found ${pendingEvents.length} upcoming Premier League matches\n`);
+    console.log(`Found ${activeEvents.length} upcoming Premier League matches\n`);
     console.log('='.repeat(100));
 
-    // Fetch odds for each event (limit to first 3 for demo)
-    for (const event of pendingEvents.slice(0, 3)) {
+    for (const event of activeEvents) {
       console.log(`\n${event.home} vs ${event.away}`);
-      console.log(`Starts: ${event.date}`);
-      console.log(`Status: ${event.status ?? 'N/A'}`);
+      console.log(`Starts: ${event.date} | Status: ${event.status}`);
       console.log('-'.repeat(100));
 
-      // Get odds from multiple bookmakers
-      // Note: Bookmaker names are case-sensitive!
+      // Get odds from multiple bookmakers (names are case-sensitive!)
       const oddsData = await client.getEventOdds({
         eventId: event.id,
-        bookmakers: 'Bet365,SingBet,FanDuel'
+        bookmakers: 'Bet365,SingBet,FanDuel',
       });
 
-      if (!oddsData || !oddsData.bookmakers) {
+      const bookmakers = (oddsData as any).bookmakers || {};
+      if (Object.keys(bookmakers).length === 0) {
         console.log('No odds available for this match');
+        console.log('='.repeat(100));
         continue;
       }
 
-      // Display odds in a table format
-      console.log(`${'Bookmaker'.padEnd(15)} ${'Home'.padEnd(10)} ${'Draw'.padEnd(10)} ${'Away'.padEnd(10)}`);
+      // Display odds table
+      console.log(
+        'Bookmaker'.padEnd(15) +
+        'Home'.padEnd(10) +
+        'Draw'.padEnd(10) +
+        'Away'.padEnd(10)
+      );
       console.log('-'.repeat(100));
 
-      // The bookmakers field is an object with bookmaker names as keys
-      const bookmakers = oddsData.bookmakers as Record<string, any[]>;
-      
-      for (const [bookieName, markets] of Object.entries(bookmakers)) {
-        // Find the moneyline (ML) market
-        const mlMarket = markets.find(market => market.name === 'ML');
-
-        if (mlMarket && mlMarket.odds && mlMarket.odds.length > 0) {
+      for (const [bookie, markets] of Object.entries(bookmakers)) {
+        // Find the ML (moneyline) market
+        const mlMarket = (markets as any[]).find((m: any) => m.name === 'ML');
+        if (mlMarket?.odds?.[0]) {
           const odds = mlMarket.odds[0];
-          const homeOdds = odds.home ?? 'N/A';
-          const drawOdds = odds.draw ?? 'N/A';
-          const awayOdds = odds.away ?? 'N/A';
-
           console.log(
-            `${bookieName.padEnd(15)} ${String(homeOdds).padEnd(10)} ${String(drawOdds).padEnd(10)} ${String(awayOdds).padEnd(10)}`
+            bookie.padEnd(15) +
+            (odds.home || 'N/A').toString().padEnd(10) +
+            (odds.draw || 'N/A').toString().padEnd(10) +
+            (odds.away || 'N/A').toString().padEnd(10)
           );
-        } else {
-          console.log(`${bookieName.padEnd(15)} No ML odds available`);
         }
+      }
+
+      // Display direct bet links
+      const urls = (oddsData as any).urls || {};
+      const validUrls = Object.entries(urls).filter(([, url]) => url && url !== 'N/A');
+      if (validUrls.length > 0) {
+        console.log('\n  Direct bet links:');
+        validUrls.forEach(([bookie, url]) => {
+          console.log(`    ${bookie}: ${url}`);
+        });
       }
 
       console.log('='.repeat(100));
