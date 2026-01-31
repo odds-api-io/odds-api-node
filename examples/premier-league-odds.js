@@ -10,7 +10,7 @@ const { OddsAPIClient } = require('odds-api-io');
 async function main() {
   // Initialize client with your API key
   const client = new OddsAPIClient({
-    apiKey: 'YOUR_API_KEY'
+    apiKey: process.env.ODDS_API_KEY || 'your-api-key-here'
   });
 
   try {

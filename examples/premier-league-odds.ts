@@ -5,12 +5,12 @@
  * Premier League matches from multiple bookmakers.
  */
 
-import { OddsAPIClient } from '../src';
+import { OddsAPIClient } from 'odds-api-io';
 
 async function main() {
   // Initialize client with your API key
   const client = new OddsAPIClient({
-    apiKey: 'YOUR_API_KEY'
+    apiKey: process.env.ODDS_API_KEY || 'your-api-key-here'
   });
 
   try {
@@ -56,11 +56,12 @@ async function main() {
       console.log(`${'Bookmaker'.padEnd(15)} ${'Home'.padEnd(10)} ${'Draw'.padEnd(10)} ${'Away'.padEnd(10)}`);
       console.log('-'.repeat(100));
 
-      for (const bookmaker of oddsData.bookmakers) {
-        const bookieName = bookmaker.name;
-
+      // The bookmakers field is an object with bookmaker names as keys
+      const bookmakers = oddsData.bookmakers as Record<string, any[]>;
+      
+      for (const [bookieName, markets] of Object.entries(bookmakers)) {
         // Find the moneyline (ML) market
-        const mlMarket = bookmaker.markets?.find(market => market.name === 'ML');
+        const mlMarket = markets.find(market => market.name === 'ML');
 
         if (mlMarket && mlMarket.odds && mlMarket.odds.length > 0) {
           const odds = mlMarket.odds[0];
