@@ -74,7 +74,7 @@ async function getOdds() {
   
   const odds = await client.getEventOdds({
     eventId: events[0].id,
-    bookmakers: 'pinnacle,bet365'
+    bookmakers: 'singbet,bet365'
   });
   
   console.log(odds);
@@ -105,7 +105,7 @@ import { OddsAPIClient } from 'odds-api-io';
 const client = new OddsAPIClient({ apiKey: 'your-api-key' });
 
 const arbs = await client.getArbitrageBets({
-  bookmakers: 'pinnacle,bet365',
+  bookmakers: 'singbet,bet365',
   limit: 10,
   includeEventDetails: true
 });
@@ -122,13 +122,13 @@ arbs.forEach(arb => {
 // Get odds for a specific event
 const odds = await client.getEventOdds({
   eventId: '62924717',
-  bookmakers: 'pinnacle,bet365'
+  bookmakers: 'singbet,bet365'
 });
 
 // Track how odds change over time
 const movements = await client.getOddsMovement({
   eventId: '62924717',
-  bookmaker: 'pinnacle',
+  bookmaker: 'singbet',
   market: 'moneyline'
 });
 ```
@@ -138,7 +138,7 @@ const movements = await client.getOddsMovement({
 ```typescript
 // Find value betting opportunities
 const valueBets = await client.getValueBets({
-  bookmaker: 'pinnacle',
+  bookmaker: 'singbet',
   includeEventDetails: true
 });
 
@@ -168,7 +168,7 @@ const participant = await client.getParticipantById(3428);
 const bookmakers = await client.getBookmakers();
 
 // Select specific bookmakers for your account
-await client.selectBookmakers('pinnacle,bet365');
+await client.selectBookmakers('singbet,bet365');
 
 // Check which bookmakers you've selected
 const selected = await client.getSelectedBookmakers();
