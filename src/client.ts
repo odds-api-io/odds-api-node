@@ -303,7 +303,7 @@ export class OddsAPIClient {
    * ```typescript
    * const odds = await client.getEventOdds({
    *   eventId: '62924717',
-   *   bookmakers: 'pinnacle,bet365'
+   *   bookmakers: 'singbet,bet365'
    * });
    * ```
    */
@@ -321,7 +321,7 @@ export class OddsAPIClient {
    * ```typescript
    * const movements = await client.getOddsMovement({
    *   eventId: '62924717',
-   *   bookmaker: 'pinnacle',
+   *   bookmaker: 'singbet',
    *   market: 'moneyline'
    * });
    * ```
@@ -340,7 +340,7 @@ export class OddsAPIClient {
    * ```typescript
    * const odds = await client.getOddsForMultipleEvents({
    *   eventIds: '12345,67890',
-   *   bookmakers: 'pinnacle,bet365'
+   *   bookmakers: 'singbet,bet365'
    * });
    * ```
    */
@@ -358,7 +358,7 @@ export class OddsAPIClient {
    * ```typescript
    * const updatedOdds = await client.getUpdatedOddsSince({
    *   since: Date.now() - 3600000, // Last hour
-   *   bookmaker: 'pinnacle',
+   *   bookmaker: 'singbet',
    *   sport: 'basketball'
    * });
    * ```
@@ -444,7 +444,7 @@ export class OddsAPIClient {
    * 
    * @example
    * ```typescript
-   * await client.selectBookmakers('pinnacle,bet365');
+   * await client.selectBookmakers('singbet,bet365');
    * ```
    */
   async selectBookmakers(bookmakers: string): Promise<{ success: boolean }> {
@@ -482,7 +482,7 @@ export class OddsAPIClient {
    * @example
    * ```typescript
    * const arbs = await client.getArbitrageBets({
-   *   bookmakers: 'pinnacle,bet365',
+   *   bookmakers: 'singbet,bet365',
    *   limit: 10,
    *   includeEventDetails: true
    * });
@@ -501,7 +501,7 @@ export class OddsAPIClient {
    * @example
    * ```typescript
    * const valueBets = await client.getValueBets({
-   *   bookmaker: 'pinnacle',
+   *   bookmaker: 'singbet',
    *   includeEventDetails: true
    * });
    * ```
