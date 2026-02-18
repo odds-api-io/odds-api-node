@@ -3,14 +3,18 @@ import {
   Sport,
   League,
   Event,
+  HistoricalEvent,
   Participant,
   Bookmaker,
   EventOdds,
+  HistoricalEventOdds,
   OddsMovement,
   ArbitrageBet,
   ValueBet,
   GetEventsParams,
+  GetHistoricalEventsParams,
   GetOddsParams,
+  GetHistoricalOddsParams,
   GetOddsMovementParams,
   GetMultiEventOddsParams,
   GetUpdatedOddsSinceParams,
@@ -287,6 +291,48 @@ export class OddsAPIClient {
    */
   async searchEvents(query: string): Promise<Event[]> {
     return this.request<Event[]>('events/search', { query }, true);
+  }
+
+  // ============================================================================
+  // HISTORICAL
+  // ============================================================================
+
+  /**
+   * Get finished historical events within a date range
+   * 
+   * @param params - Historical event filter parameters
+   * @returns List of historical events
+   * 
+   * @example
+   * ```typescript
+   * const events = await client.getHistoricalEvents({
+   *   sport: 'football',
+   *   league: 'england-premier-league',
+   *   from: '2026-01-01T00:00:00Z',
+   *   to: '2026-01-31T23:59:59Z'
+   * });
+   * ```
+   */
+  async getHistoricalEvents(params: GetHistoricalEventsParams): Promise<HistoricalEvent[]> {
+    return this.request<HistoricalEvent[]>('historical/events', params, true);
+  }
+
+  /**
+   * Get closing odds for a historical event
+   * 
+   * @param params - Historical odds query parameters
+   * @returns Historical event odds data
+   * 
+   * @example
+   * ```typescript
+   * const odds = await client.getHistoricalOdds({
+   *   eventId: '67697888',
+   *   bookmakers: 'singbet,bet365'
+   * });
+   * ```
+   */
+  async getHistoricalOdds(params: GetHistoricalOddsParams): Promise<HistoricalEventOdds> {
+    return this.request<HistoricalEventOdds>('historical/odds', params, true);
   }
 
   // ============================================================================

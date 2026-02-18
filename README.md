@@ -195,6 +195,13 @@ await client.clearSelectedBookmakers();
 | `getLiveEvents(sport)` | Get currently live events | [Docs](https://docs.odds-api.io/api-reference/events/get-live-events) |
 | `searchEvents(query)` | Search for events by keyword | [Docs](https://docs.odds-api.io/api-reference/events/search-events) |
 
+### Historical
+
+| Method | Description | Docs |
+|--------|-------------|------|
+| `getHistoricalEvents(params)` | Get finished historical events in a date range | [Docs](https://docs.odds-api.io/api-reference/historical/get-historical-events) |
+| `getHistoricalOdds(params)` | Get closing odds for a historical event | [Docs](https://docs.odds-api.io/api-reference/historical/get-historical-odds) |
+
 ### Odds
 
 | Method | Description | Docs |
@@ -282,12 +289,16 @@ import type {
   Sport,
   League,
   Event,
+  HistoricalEvent,
   Participant,
   Bookmaker,
   EventOdds,
+  HistoricalEventOdds,
   ArbitrageBet,
   ValueBet,
-  GetEventsParams
+  GetEventsParams,
+  GetHistoricalEventsParams,
+  GetHistoricalOddsParams
 } from 'odds-api-io';
 ```
 
