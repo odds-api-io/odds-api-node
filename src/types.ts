@@ -44,6 +44,32 @@ export interface Event {
   };
 }
 
+interface HistoricalNamedSlug {
+  name: string;
+  slug: string;
+}
+
+export interface HistoricalSport extends HistoricalNamedSlug {}
+export interface HistoricalLeague extends HistoricalNamedSlug {}
+
+export interface HistoricalScore {
+  home: number;
+  away: number;
+}
+
+export interface HistoricalEvent {
+  id: number;
+  home: string;
+  away: string;
+  homeId: number;
+  awayId: number;
+  date: string;
+  status: string;
+  sport: HistoricalSport;
+  league: HistoricalLeague;
+  scores?: HistoricalScore;
+}
+
 export interface Bookmaker {
   id: string;
   name: string;
@@ -76,6 +102,29 @@ export interface OddsMovement {
     odds: number;
     timestamp: number;
   }>;
+}
+
+export interface HistoricalOddsSelection {
+  [key: string]: string | number | undefined;
+}
+
+export interface HistoricalOddsMarket {
+  name: string;
+  odds: HistoricalOddsSelection[];
+  updatedAt?: string;
+}
+
+export interface HistoricalEventOdds {
+  id: number;
+  home: string;
+  away: string;
+  date: string;
+  status: string;
+  sport: HistoricalSport;
+  league: HistoricalLeague;
+  scores?: HistoricalScore;
+  bookmakers: Record<string, HistoricalOddsMarket[]>;
+  urls?: Record<string, string>;
 }
 
 export interface ArbitrageBet {
@@ -140,9 +189,29 @@ export interface GetEventsParams {
 }
 
 /**
+ * Parameters for getting historical events
+ */
+export interface GetHistoricalEventsParams {
+  sport: string;
+  league: string;
+  /** Start date filter (RFC3339 timestamp) */
+  from: string;
+  /** End date filter (RFC3339 timestamp) */
+  to: string;
+}
+
+/**
  * Parameters for getting odds
  */
 export interface GetOddsParams {
+  eventId: string;
+  bookmakers: string;
+}
+
+/**
+ * Parameters for getting historical event odds
+ */
+export interface GetHistoricalOddsParams {
   eventId: string;
   bookmakers: string;
 }
