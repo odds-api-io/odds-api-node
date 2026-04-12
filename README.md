@@ -13,6 +13,7 @@ Official Node.js SDK for [**Odds-API.io**](https://odds-api.io) - Real-time spor
 - 📊 **Comprehensive Odds Data** - Real-time odds from 250+ bookmakers
 - 💰 **Arbitrage Detection** - Find risk-free betting opportunities
 - 📈 **Value Bets** - Identify positive expected value bets
+- 📉 **Dropping Odds** - Track sharp bookmaker line movements
 - 🔴 **Live Events** - Track in-play events and odds
 - 🔍 **Advanced Search** - Search events, participants, and leagues
 - ⚡ **TypeScript First** - Full type safety with TypeScript
@@ -148,6 +149,24 @@ valueBets.forEach(bet => {
 });
 ```
 
+### Tracking Dropping Odds
+
+```typescript
+// Find the biggest line movements from sharp bookmakers
+const drops = await client.getDroppingOdds({
+  sport: 'football',
+  market: 'ML',
+  minDrop: 10,
+  sort: 'recent',
+  includeEventDetails: true
+});
+
+drops.forEach(drop => {
+  console.log(`${drop.event?.home} vs ${drop.event?.away}`);
+  console.log(`${drop.market.name} ${drop.betSide}: ${drop.odds.opening} → ${drop.odds.current} (↓${drop.odds.drop.sinceOpening}%)`);
+});
+```
+
 ### Working with Participants
 
 ```typescript
@@ -233,6 +252,7 @@ await client.clearSelectedBookmakers();
 |--------|-------------|------|
 | `getArbitrageBets(params)` | Find arbitrage opportunities | [Docs](https://docs.odds-api.io/api-reference/arbitrage-bets/get-arbitrage-betting-opportunities) |
 | `getValueBets(params)` | Find value bets | [Docs](https://docs.odds-api.io/api-reference/value-bets/get-value-bets) |
+| `getDroppingOdds(params)` | Track sharp bookmaker line movements | [Docs](https://docs.odds-api.io/api-reference/dropping-odds/get-dropping-odds) |
 
 ## Error Handling
 
@@ -296,6 +316,7 @@ import type {
   HistoricalEventOdds,
   ArbitrageBet,
   ValueBet,
+  DroppingOddsEntry,
   GetEventsParams,
   GetHistoricalEventsParams,
   GetHistoricalOddsParams
