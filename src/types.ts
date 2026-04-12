@@ -153,6 +153,49 @@ export interface ValueBet {
   event?: Event;
 }
 
+export interface DroppingOddsEntry {
+  eventId: number;
+  event?: {
+    home: string;
+    away: string;
+    date: string;
+    sport: { name: string; slug: string };
+    league: { name: string; slug: string };
+  };
+  market: {
+    name: string;
+    hdp?: number;
+  };
+  betSide: string;
+  odds: {
+    opening: number;
+    current: number;
+    drop: {
+      sinceOpening: number;
+      '12h': number | null;
+      '24h': number | null;
+      '48h': number | null;
+    };
+  };
+  lastMovedAt: number | null;
+  updatedAt: number;
+}
+
+/**
+ * Parameters for getting dropping odds
+ */
+export interface GetDroppingOddsParams {
+  sport?: string;
+  league?: string;
+  market?: string;
+  timeWindow?: 'opening' | '12h' | '24h' | '48h';
+  sort?: 'drop' | 'recent' | 'kickoff';
+  minDrop?: number;
+  limit?: number;
+  page?: number;
+  includeEventDetails?: boolean;
+}
+
 /**
  * Client configuration options
  */

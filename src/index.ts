@@ -46,4 +46,6 @@ export type {
   GetParticipantsParams,
   GetArbitrageBetsParams,
   GetValueBetsParams,
+  DroppingOddsEntry,
+  GetDroppingOddsParams,
 } from './types.js';
