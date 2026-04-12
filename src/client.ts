@@ -21,6 +21,8 @@ import {
   GetParticipantsParams,
   GetArbitrageBetsParams,
   GetValueBetsParams,
+  DroppingOddsEntry,
+  GetDroppingOddsParams,
 } from './types.js';
 import {
   OddsAPIError,
@@ -554,5 +556,19 @@ export class OddsAPIClient {
    */
   async getValueBets(params: GetValueBetsParams): Promise<ValueBet[]> {
     return this.request<ValueBet[]>('value-bets', params, true);
+  }
+
+  /**
+   * Get dropping odds from sharp bookmakers.
+   * @example
+   * const drops = await client.getDroppingOdds({
+   *   sport: 'football',
+   *   market: 'ML',
+   *   minDrop: 10,
+   *   includeEventDetails: true
+   * });
+   */
+  async getDroppingOdds(params: GetDroppingOddsParams = {}): Promise<DroppingOddsEntry[]> {
+    return this.request<DroppingOddsEntry[]>('dropping-odds', params, true);
   }
 }
