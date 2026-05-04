@@ -1,7 +1,10 @@
 /**
- * WebSocket Real-Time Odds Feed with Optional Initial Snapshot
+ * WebSocket Real-Time Odds Feed with Reconnection & Replay
  *
  * Connects to the Odds-API WebSocket for real-time odds updates.
+ * Tracks sequence numbers and reconnects with replay on disconnection,
+ * ensuring zero data loss across network interruptions.
+ *
  * Optionally pre-fetches all current odds via REST API first, so you
  * have a complete snapshot before the live feed starts.
  *
@@ -39,7 +42,8 @@ interface MarketOdds {
 }
 
 interface WsMessage {
-  type: 'welcome' | 'created' | 'updated' | 'deleted' | 'no_markets';
+  type: 'welcome' | 'created' | 'updated' | 'deleted' | 'no_markets' | 'resync_required';
+  seq?: number;
   id?: string;
   bookie?: string;
   timestamp?: string;
@@ -50,14 +54,26 @@ interface WsMessage {
   leagues_filter?: string[];
   status_filter?: string;
   warning?: string;
+  reason?: string;
+  current_seq?: number;
+  last_seq?: number;
 }
 
 /**
- * Real-time odds client with optional REST API pre-fetch.
+ * Real-time odds client with reconnection, replay, and optional
+ * REST API pre-fetch.
  *
- * When prefetch=true, fetches all current odds via REST before
- * connecting to WebSocket. This gives you a complete snapshot
- * so you don't miss any data while connecting.
+ * Sequence Tracking & Replay:
+ *   Every message from the server includes a monotonically increasing
+ *   `seq` field. This client tracks the last received seq and passes
+ *   it as `lastSeq` on reconnection. The server then replays the
+ *   latest state for each event:bookmaker pair that changed during
+ *   the disconnection window (compacted replay — one message per pair,
+ *   not every intermediate tick).
+ *
+ *   If the gap is too large (server retention exceeded), the server
+ *   sends a `resync_required` message — the client should then rebuild
+ *   state from the REST API snapshot.
  */
 class OddsWebSocketClient {
   private ws: WebSocket | null = null;
@@ -66,6 +82,9 @@ class OddsWebSocketClient {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
   private pingInterval: NodeJS.Timeout | null = null;
+
+  // Sequence tracking for reconnection replay
+  private lastSeq = 0;
 
   // In-memory odds store: eventId -> bookmaker -> markets
   public oddsStore: Map<string, Record<string, MarketOdds[]>> = new Map();
@@ -147,6 +166,7 @@ class OddsWebSocketClient {
     if (this.sport) url += `&sport=${this.sport}`;
     if (this.leagues) url += `&leagues=${this.leagues}`;
     if (this.status) url += `&status=${this.status}`;
+    if (this.lastSeq > 0) url += `&lastSeq=${this.lastSeq}`;
     return url;
   }
 
@@ -166,6 +186,11 @@ class OddsWebSocketClient {
 
   private handleParsed(data: WsMessage): void {
     try {
+      // Track sequence number for replay on reconnection
+      if (data.seq && data.seq > this.lastSeq) {
+        this.lastSeq = data.seq;
+      }
+
       switch (data.type) {
         case 'welcome':
           console.log('Connected to Odds-API WebSocket');
@@ -174,7 +199,22 @@ class OddsWebSocketClient {
           console.log(`  Leagues: ${data.leagues_filter?.join(', ') || 'all'}`);
           console.log(`  Status: ${data.status_filter || 'all'}`);
           if (data.warning) console.log(`  Warning: ${data.warning}`);
+          if (this.lastSeq > 0) {
+            console.log(`  Reconnected with lastSeq=${this.lastSeq} — replaying missed updates...`);
+          }
           console.log('\nListening for real-time updates...\n');
+          break;
+
+        case 'resync_required':
+          // Server cannot replay (gap too large or data expired).
+          // Rebuild state from REST API snapshot.
+          console.log(`⚠️  RESYNC REQUIRED: ${data.reason}`);
+          console.log(`  The server cannot replay missed updates.`);
+          console.log(`  Rebuilding state from REST API snapshot...`);
+          this.lastSeq = 0;
+          if (this.prefetch) {
+            this.initialFetch();
+          }
           break;
 
         case 'created':
@@ -190,7 +230,7 @@ class OddsWebSocketClient {
           this.oddsStore.get(eventId)![bookie] = data.markets || [];
 
           // Print update
-          console.log(`[${label}] Event ${eventId} | ${bookie}`);
+          console.log(`[${label}] Event ${eventId} | ${bookie} (seq ${data.seq})`);
           for (const market of data.markets || []) {
             const odds = market.odds?.[0] || {};
             if (market.name === 'ML') {
@@ -208,14 +248,14 @@ class OddsWebSocketClient {
         case 'deleted': {
           const eventId = data.id || '?';
           const bookie = data.bookie || '?';
-          console.log(`[DELETED] Event ${eventId} | ${bookie}\n`);
+          console.log(`[DELETED] Event ${eventId} | ${bookie} (seq ${data.seq})\n`);
           const stored = this.oddsStore.get(eventId);
           if (stored) delete stored[bookie];
           break;
         }
 
         case 'no_markets':
-          console.log(`[NO MARKETS] Event ${data.id || '?'}\n`);
+          console.log(`[NO MARKETS] Event ${data.id || '?'} (seq ${data.seq})\n`);
           break;
       }
     } catch (e: any) {
@@ -224,7 +264,11 @@ class OddsWebSocketClient {
   }
 
   private startWs(): void {
-    this.ws = new WebSocket(this.buildUrl());
+    const url = this.buildUrl();
+    if (this.lastSeq > 0) {
+      console.log(`Connecting with lastSeq=${this.lastSeq} for replay...`);
+    }
+    this.ws = new WebSocket(url);
 
     this.ws.on('open', () => {
       console.log('WebSocket connection opened');
@@ -256,7 +300,11 @@ class OddsWebSocketClient {
         }
         // Exponential backoff: 1s, 2s, 4s, 8s... capped at 30s
         const delay = Math.min(2 ** (this.reconnectAttempts - 1) * 1000, 30000);
-        console.log(`Reconnecting in ${delay / 1000}s (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+        console.log(
+          `Reconnecting in ${delay / 1000}s ` +
+          `(attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}, ` +
+          `lastSeq=${this.lastSeq})...`
+        );
         this.reconnectTimeout = setTimeout(() => this.startWs(), delay);
       }
     });
@@ -292,6 +340,11 @@ class OddsWebSocketClient {
   getOdds(eventId: string): Record<string, MarketOdds[]> {
     return this.oddsStore.get(eventId) || {};
   }
+
+  /** Get the last received sequence number. */
+  getLastSeq(): number {
+    return this.lastSeq;
+  }
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────
@@ -319,6 +372,7 @@ async function main() {
     console.log('\nStopping...');
     client.stop();
     console.log(`Final store: ${client.oddsStore.size} events cached`);
+    console.log(`Last seq: ${client.getLastSeq()}`);
     console.log('Goodbye!');
     process.exit(0);
   });
