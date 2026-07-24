@@ -68,11 +68,11 @@ interface WsMessage {
  *   `seq` field. This client tracks the last received seq and passes
  *   it as `lastSeq` on reconnection. The server then replays the
  *   latest state for each event:bookmaker pair that changed during
- *   the disconnection window (compacted replay — one message per pair,
+ *   the disconnection window (compacted replay, one message per pair,
  *   not every intermediate tick).
  *
  *   If the gap is too large (server retention exceeded), the server
- *   sends a `resync_required` message — the client should then rebuild
+ *   sends a `resync_required` message; the client should then rebuild
  *   state from the REST API snapshot.
  */
 class OddsWebSocketClient {
@@ -200,7 +200,7 @@ class OddsWebSocketClient {
           console.log(`  Status: ${data.status_filter || 'all'}`);
           if (data.warning) console.log(`  Warning: ${data.warning}`);
           if (this.lastSeq > 0) {
-            console.log(`  Reconnected with lastSeq=${this.lastSeq} — replaying missed updates...`);
+            console.log(`  Reconnected with lastSeq=${this.lastSeq}, replaying missed updates...`);
           }
           console.log('\nListening for real-time updates...\n');
           break;

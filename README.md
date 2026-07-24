@@ -5,12 +5,14 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js Version](https://img.shields.io/node/v/odds-api-io.svg)](https://nodejs.org)
 
-Official Node.js SDK for [**Odds-API.io**](https://odds-api.io) - Real-time sports betting odds from 250+ bookmakers.
+Official Node.js SDK for [**Odds-API.io**](https://odds-api.io) - Real-time sports betting odds from 265+ bookmakers.
+
+Building with AI? See the [AI and vibe coding guide](https://docs.odds-api.io/ai-vibe-coding). Prefer Python? Check out the [Python SDK](https://github.com/odds-api-io/odds-api-python).
 
 ## Features
 
-- 🏀 **20+ Sports** - Basketball, football, tennis, and more
-- 📊 **Comprehensive Odds Data** - Real-time odds from 250+ bookmakers
+- 🏀 **34 Sports** - Basketball, football, tennis, and more
+- 📊 **Comprehensive Odds Data** - Real-time odds from 265+ bookmakers
 - 💰 **Arbitrage Detection** - Find risk-free betting opportunities
 - 📈 **Value Bets** - Identify positive expected value bets
 - 📉 **Dropping Odds** - Track sharp bookmaker line movements
