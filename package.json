@@ -1,7 +1,7 @@
 {
   "name": "odds-api-io",
-  "version": "1.2.1",
-  "description": "Official Node.js SDK for Odds-API.io - Real-time sports betting odds from 250+ bookmakers",
+  "version": "1.2.2",
+  "description": "Official Node.js SDK for Odds-API.io - Real-time sports betting odds from 265+ bookmakers",
   "keywords": [
     "odds",
     "betting",
@@ -10,7 +10,9 @@
     "arbitrage",
     "value-bets",
     "bookmakers",
-    "odds-api"
+    "odds-api",
+    "betting-odds",
+    "sports-data"
   ],
   "author": "Odds-API.io",
   "license": "MIT",

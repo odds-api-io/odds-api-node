@@ -99,7 +99,7 @@ function handleMessage(data) {
     console.log(`  Bookmakers: ${data.bookmakers?.join(', ') || 'N/A'}`);
     if (data.warning) console.log(`  Warning: ${data.warning}`);
     if (lastSeq > 0) {
-      console.log(`  Reconnected with lastSeq=${lastSeq} — replaying missed updates...`);
+      console.log(`  Reconnected with lastSeq=${lastSeq}, replaying missed updates...`);
     }
     console.log('\nListening for real-time updates...\n');
 
