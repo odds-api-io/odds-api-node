@@ -361,3 +361,11 @@ This is the official SDK for Odds-API.io. This tool is for informational purpose
 ---
 
 Built with ❤️ for the sports betting and analytics community
+
+## Citation
+
+If you use this package in research or a publication, please cite it. Citation metadata is in [CITATION.cff](CITATION.cff) (GitHub renders a "Cite this repository" button from it) and Zenodo metadata is in `.zenodo.json`.
+
+```
+Outlier AS. odds-api-io: Official Node.js SDK for Odds-API.io (version 1.2.2). https://github.com/odds-api-io/odds-api-node
+```
