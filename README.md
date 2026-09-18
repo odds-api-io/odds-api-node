@@ -1,5 +1,7 @@
 # Odds-API.io Node.js SDK
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22836645.svg)](https://doi.org/10.5281/zenodo.22836645)
+
 [![npm version](https://img.shields.io/npm/v/odds-api-io.svg)](https://www.npmjs.com/package/odds-api-io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
