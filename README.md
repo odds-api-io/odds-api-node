@@ -232,7 +232,7 @@ await client.clearSelectedBookmakers();
 | `getEventOdds(params)` | Get odds for an event | [Docs](https://docs.odds-api.io/api-reference/odds/get-event-odds) |
 | `getOddsMovement(params)` | Track odds changes | [Docs](https://docs.odds-api.io/api-reference/odds/get-odds-movements) |
 | `getOddsForMultipleEvents(params)` | Get odds for multiple events | [Docs](https://docs.odds-api.io/api-reference/odds/get-odds-for-multiple-events) |
-| `getUpdatedOddsSince(params)` | Get odds updated since timestamp | [Docs](https://docs.odds-api.io/api-reference/odds/get-updated-event-odds-since-a-given-timestamp) |
+| `getUpdatedOddsSince(params)` | Get odds updated since timestamp. `markets` is required by the API from 15 October 2026 | [Docs](https://docs.odds-api.io/api-reference/odds/get-updated-event-odds-since-a-given-timestamp) |
 
 ### Participants
 
