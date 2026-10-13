@@ -281,9 +281,18 @@ export interface GetMultiEventOddsParams {
  * Parameters for getting updated odds since timestamp
  */
 export interface GetUpdatedOddsSinceParams {
+  /** Unix timestamp in seconds, no more than 90 seconds old */
   since: number;
+  /** Bookmaker name, e.g. 'Bet365' */
   bookmaker: string;
+  /** Sport name or slug, e.g. 'football' */
   sport: string;
+  /**
+   * Comma-separated market names (max 20), e.g. 'ML,Spread,Totals'.
+   * Required by the API from 15 October 2026. Valid names per sport:
+   * https://api.odds-api.io/v3/markets?sport=<sport>
+   */
+  markets?: string;
 }
 
 /**
