@@ -405,9 +405,10 @@ export class OddsAPIClient {
    * @example
    * ```typescript
    * const updatedOdds = await client.getUpdatedOddsSince({
-   *   since: Date.now() - 3600000, // Last hour
-   *   bookmaker: 'singbet',
-   *   sport: 'basketball'
+   *   since: Math.floor(Date.now() / 1000) - 20, // seconds, at most 90 old
+   *   bookmaker: 'Bet365',
+   *   sport: 'football',
+   *   markets: 'ML,Spread,Totals', // required from 15 October 2026
    * });
    * ```
    */
