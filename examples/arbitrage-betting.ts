@@ -1,5 +1,6 @@
 /**
- * Arbitrage betting example - Find risk-free betting opportunities
+ * Arbitrage example: find price gaps across bookmakers. Prices move and
+ * bookmakers limit stakes, so check every leg before acting.
  */
 
 import { OddsAPIClient } from 'odds-api-io';
