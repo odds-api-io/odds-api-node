@@ -1,6 +1,6 @@
 {
   "name": "odds-api-io",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Official Node.js and TypeScript SDK for the Odds-API.io sports betting odds API: real-time odds API for 450+ bookmakers, REST and WebSocket",
   "keywords": [
     "odds api",
@@ -28,7 +28,11 @@
     "bet365",
     "draftkings",
     "fanduel",
-    "betfair"
+    "betfair",
+    "outrights",
+    "golf odds",
+    "closing lines",
+    "bet settlement"
   ],
   "author": "Odds-API.io",
   "license": "MIT",
@@ -69,6 +73,14 @@
     "clean": "rm -rf dist",
     "test": "node --test",
     "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "ws": ">=8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "ws": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

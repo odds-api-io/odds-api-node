@@ -58,14 +58,11 @@ async function main() {
         market: 'ML',
       });
 
-      if (Array.isArray(movements) && movements.length > 0) {
-        const recent = movements.slice(-5);
-        recent.forEach((m: any) => {
-          console.log(`  ${m.updatedAt}: Home ${m.odds?.home} | Away ${m.odds?.away}`);
-        });
-      } else {
-        console.log('  No movement data available');
-      }
+      console.log(`  Opening: home ${movements.opening.home} | away ${movements.opening.away}`);
+      console.log(`  Latest:  home ${movements.latest.home} | away ${movements.latest.away}`);
+      movements.movements.slice(-5).forEach((m) => {
+        console.log(`  ${new Date(m.timestamp).toISOString()}: home ${m.home} | away ${m.away}`);
+      });
     } catch {
       console.log('  No movement data available');
     }
@@ -73,16 +70,13 @@ async function main() {
     // Get recently updated odds
     console.log('\nChecking for recent odds updates...');
     try {
-      const oneHourAgo = Date.now() - 3600000;
-      const updatedOdds = await client.getUpdatedOddsSince({
-        since: oneHourAgo,
+      const { data, nextSince } = await client.getUpdatedOddsSinceWithMeta({
+        since: Math.floor(Date.now() / 1000) - 20,
         bookmaker: 'Bet365',
         sport: 'basketball',
+        markets: ['ML', 'Spread', 'Totals'],
       });
-
-      if (Array.isArray(updatedOdds)) {
-        console.log(`${updatedOdds.length} events have updated odds in the last hour`);
-      }
+      console.log(`${data.length} events changed in the last 20 seconds; next since=${nextSince}`);
     } catch {
       console.log('Could not fetch recent updates');
     }
