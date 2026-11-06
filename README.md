@@ -7,13 +7,64 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js Version](https://img.shields.io/node/v/odds-api-io.svg)](https://nodejs.org)
 
-Official Node.js SDK for [**Odds-API.io**](https://odds-api.io) - Real-time sports betting odds from 450+ bookmakers.
+Official Node.js and TypeScript SDK for the [**Odds-API.io**](https://odds-api.io) sports betting odds API: real-time and pre-match odds from 450+ bookmakers across 34 sports, over REST and WebSocket.
 
-Building with AI? See the [AI and vibe coding guide](https://docs.odds-api.io/ai-vibe-coding). Prefer Python? Check out the [Python SDK](https://github.com/odds-api-io/odds-api-python).
+Building with AI? See the [AI and vibe coding guide](https://docs.odds-api.io/ai-vibe-coding). Prefer Python? Check out the [Python SDK](https://github.com/odds-api-io/odds-api-python). Prefer the terminal? Try the [CLI](https://github.com/odds-api-io/odds-api-cli).
+
+## Quickstart
+
+1. Install:
+
+   ```bash
+   npm install odds-api-io
+   ```
+
+2. Set your API key ([get one here](https://odds-api.io/pricing?ref=npm)):
+
+   ```bash
+   export ODDS_API_KEY="your-api-key"
+   ```
+
+3. Make your first request:
+
+   ```typescript
+   import { OddsAPIClient } from 'odds-api-io';
+
+   const client = new OddsAPIClient({ apiKey: process.env.ODDS_API_KEY! });
+
+   const events = await client.getEvents({ sport: 'football', league: 'england-premier-league' });
+   const odds = await client.getEventOdds({ eventId: String(events[0].id), bookmakers: 'Bet365,Unibet' });
+   console.log(odds);
+   ```
+
+## Get an API key
+
+The odds API needs a key from a paid plan. Pick a plan at [**odds-api.io/pricing**](https://odds-api.io/pricing?ref=npm). Rate limits, the number of bookmakers you can select and WebSocket access depend on the plan.
+
+## Sports and bookmakers
+
+| Sport | Example leagues |
+|-------|-----------------|
+| Football (soccer) | Premier League, La Liga, Champions League |
+| Basketball | NBA, EuroLeague |
+| American football | NFL, NCAAF |
+| Baseball | MLB |
+| Ice hockey | NHL |
+| Tennis | ATP, WTA |
+| Esports | CS2, League of Legends, Dota 2 |
+| ...and 27 more | 34 sports in total |
+
+Odds come from **450+ bookmakers**, including Bet365, DraftKings, FanDuel, Betfair, Unibet and SingBet. See the [full coverage list](https://odds-api.io/sportsbooks#coverage).
+
+## Documentation
+
+- [API documentation](https://docs.odds-api.io/)
+- [API reference](https://docs.odds-api.io/api-reference)
+- [AI and vibe coding guide](https://docs.odds-api.io/ai-vibe-coding)
 
 ## Features
 
-- 🏀 **34 Sports** - Basketball, football, tennis, and more
+- 🏀 **34 Sports** - Football, basketball, tennis, esports and more
 - 📊 **Comprehensive Odds Data** - Real-time odds from 450+ bookmakers
 - 💰 **Arbitrage Detection** - Find risk-free betting opportunities
 - 📈 **Value Bets** - Identify positive expected value bets
@@ -24,17 +75,7 @@ Building with AI? See the [AI and vibe coding guide](https://docs.odds-api.io/ai
 - 📦 **Dual Package** - Works with both ESM and CommonJS
 - 🛡️ **Error Handling** - Custom error classes for better debugging
 
-## Installation
-
-```bash
-npm install odds-api-io
-```
-
-## Get Your API Key
-
-You need an API key from a paid plan. Visit [**odds-api.io/pricing**](https://odds-api.io/pricing) to get one.
-
-## Quick Start
+## Usage
 
 ### TypeScript
 
@@ -335,7 +376,7 @@ An API key from a paid plan is required. Rate limits, bookmaker selection and We
 
 - 📘 [**API Documentation**](https://docs.odds-api.io/)
 - 🌐 [**Odds-API.io Website**](https://odds-api.io)
-- 💳 [**Get Your API Key**](https://odds-api.io/pricing)
+- 💳 [**Get Your API Key**](https://odds-api.io/pricing?ref=npm)
 - 🐛 [**Report Issues**](https://github.com/odds-api-io/odds-api-node/issues)
 
 ## Examples Directory
@@ -363,5 +404,5 @@ Built with ❤️ for the sports betting and analytics community
 If you use this package in research or a publication, please cite it. Citation metadata is in [CITATION.cff](CITATION.cff) (GitHub renders a "Cite this repository" button from it) and Zenodo metadata is in `.zenodo.json`.
 
 ```
-Outlier AS. odds-api-io: Official Node.js SDK for Odds-API.io (version 1.2.2). https://github.com/odds-api-io/odds-api-node
+Outlier AS. odds-api-io: Official Node.js SDK for Odds-API.io (version 1.4.0). https://github.com/odds-api-io/odds-api-node
 ```
