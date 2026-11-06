@@ -64,275 +64,321 @@ Odds come from **450+ bookmakers**, including Bet365, DraftKings, FanDuel, Betfa
 
 ## Features
 
-- 🏀 **34 Sports** - Football, basketball, tennis, esports and more
-- 📊 **Comprehensive Odds Data** - Real-time odds from 450+ bookmakers
-- 💰 **Arbitrage Detection** - Find risk-free betting opportunities
-- 📈 **Value Bets** - Identify positive expected value bets
-- 📉 **Dropping Odds** - Track sharp bookmaker line movements
-- 🔴 **Live Events** - Track in-play events and odds
-- 🔍 **Advanced Search** - Search events, participants, and leagues
-- ⚡ **TypeScript First** - Full type safety with TypeScript
-- 📦 **Dual Package** - Works with both ESM and CommonJS
-- 🛡️ **Error Handling** - Custom error classes for better debugging
+- REST client for every public v3 endpoint: events, odds, odds summary, movements, value bets, arbitrage, dropping odds, historical odds and closing lines, settlement and grading, golf outrights, participants, bookmaker mappings
+- `OddsWebSocket`: real-time odds, scores and status with reconnects that resume from the last `seq`
+- Async iterators for paginated endpoints (`iterateEvents`, `iterateClosingLines`, `iterateMappings`, `iterateDroppingOdds`, `iterateHistoricalEvents`) and `pollUpdatedOdds` for the `/odds/updated` delta
+- Types that match the responses, including the period score keys (`p1`..`pN`, `ft`, `ot`, `ap`)
+- Error classes that keep the server's message, with `retryAfter` on rate limits and optional retries with backoff
+- ESM and CommonJS, Node.js 18+
 
 ## Usage
 
-### TypeScript
-
 ```typescript
 import { OddsAPIClient } from 'odds-api-io';
 
-const client = new OddsAPIClient({
-  apiKey: 'your-api-key-here'
-});
+const client = new OddsAPIClient({ apiKey: process.env.ODDS_API_KEY! });
 
-// Get all available sports
-const sports = await client.getSports();
-console.log(`Found ${sports.length} sports`);
+// Exact market names for a sport (no key needed)
+const { markets } = await client.getMarkets('football');
 
-// Get upcoming NBA events
+// Upcoming and live Premier League matches
 const events = await client.getEvents({
-  sport: 'basketball',
-  league: 'usa-nba'
+  sport: 'football',
+  league: 'england-premier-league',
+  status: ['pending', 'live'],
 });
 
-// Search for specific games
-const lakersGames = await client.searchEvents('Lakers');
+// Odds for one match. Pass `markets` to keep responses small.
+const odds = await client.getEventOdds({
+  eventId: events[0].id,
+  bookmakers: ['Bet365', 'SingBet'],
+  markets: ['ML', 'Spread', 'Totals'],
+});
+for (const [bookmaker, bookMarkets] of Object.entries(odds.bookmakers)) {
+  const ml = bookMarkets.find((m) => m.name === 'ML');
+  console.log(bookmaker, ml?.odds[0]); // { home: '2.10', draw: '3.40', away: '3.20' }
+}
 
-// Get live events
-const liveEvents = await client.getLiveEvents('basketball');
+// Search, including in-play matches
+const live = await client.searchEvents('Liverpool', { status: 'live' });
 ```
 
-### JavaScript (CommonJS)
+CommonJS works the same way:
 
 ```javascript
 const { OddsAPIClient } = require('odds-api-io');
-
-const client = new OddsAPIClient({
-  apiKey: 'your-api-key-here'
-});
-
-async function getOdds() {
-  const events = await client.getEvents({
-    sport: 'basketball',
-    league: 'usa-nba'
-  });
-  
-  const odds = await client.getEventOdds({
-    eventId: events[0].id,
-    bookmakers: 'singbet,bet365'
-  });
-  
-  console.log(odds);
-}
-
-getOdds();
 ```
 
-### JavaScript (ESM)
+Comma-separated parameters (`bookmakers`, `markets`, `eventIds`, `leagues`, `status`) accept either a string (`'Bet365,SingBet'`) or an array.
 
-```javascript
-import { OddsAPIClient } from 'odds-api-io';
+Market names must match in full: there is no `Match Winner` (use `ML`) and no bare `Over/Under`. Call `getMarkets(sport)` to see the names a sport serves.
 
-const client = new OddsAPIClient({
-  apiKey: 'your-api-key-here'
-});
-
-const sports = await client.getSports();
-```
-
-## Examples
-
-### Finding Arbitrage Opportunities
+## Odds comparison and summary
 
 ```typescript
-import { OddsAPIClient } from 'odds-api-io';
+// Best, average, median, worst and fair price per line across bookmakers (Growth plans and above)
+const summary = await client.getOddsSummary({ eventId: 123456, markets: ['ML', 'Totals'], includeExchanges: true });
+const home = summary.markets[0].lines[0].outcomes.home;
+console.log(home.best, home.bestBookmakers, home.fair);
 
-const client = new OddsAPIClient({ apiKey: 'your-api-key' });
-
-const arbs = await client.getArbitrageBets({
-  bookmakers: 'singbet,bet365',
-  limit: 10,
-  includeEventDetails: true
-});
-
-arbs.forEach(arb => {
-  console.log(`Profit: ${arb.profitPercentage}%`);
-  console.log('Legs:', arb.legs);
-});
+// Price history for one market (prematch)
+const history = await client.getOddsMovement({ eventId: 123456, bookmaker: 'Bet365', market: 'Totals', marketLine: 2.5 });
+console.log(history.opening, history.latest);
 ```
 
-### Tracking Odds Movements
+## Polling for changes
+
+`/odds/updated` returns only the market groups that changed. `pollUpdatedOdds` passes each `X-Next-Since` header back as the next `since`:
 
 ```typescript
-// Get odds for a specific event
-const odds = await client.getEventOdds({
-  eventId: '62924717',
-  bookmakers: 'singbet,bet365'
-});
-
-// Track how odds change over time
-const movements = await client.getOddsMovement({
-  eventId: '62924717',
-  bookmaker: 'singbet',
-  market: 'moneyline'
-});
-```
-
-### Getting Value Bets
-
-```typescript
-// Find value betting opportunities
-const valueBets = await client.getValueBets({
-  bookmaker: 'singbet',
-  includeEventDetails: true
-});
-
-valueBets.forEach(bet => {
-  console.log(`Value: ${bet.valuePercentage}%`);
-  console.log(`Odds: ${bet.odds} (Fair: ${bet.fairOdds})`);
-});
-```
-
-### Tracking Dropping Odds
-
-```typescript
-// Find the biggest line movements from sharp bookmakers
-const drops = await client.getDroppingOdds({
+const controller = new AbortController();
+for await (const batch of client.pollUpdatedOdds({
+  bookmaker: 'Bet365',
   sport: 'football',
-  market: 'ML',
-  minDrop: 10,
-  sort: 'recent',
-  includeEventDetails: true
-});
-
-drops.forEach(drop => {
-  console.log(`${drop.event?.home} vs ${drop.event?.away}`);
-  console.log(`${drop.market.name} ${drop.betSide}: ${drop.odds.opening} → ${drop.odds.current} (↓${drop.odds.drop.sinceOpening}%)`);
-});
-```
-
-### Working with Participants
-
-```typescript
-// Search for teams/players
-const warriors = await client.getParticipants({
-  sport: 'basketball',
-  search: 'Warriors'
-});
-
-// Get participant details by ID
-const participant = await client.getParticipantById(3428);
-```
-
-### Managing Bookmakers
-
-```typescript
-// Get all available bookmakers
-const bookmakers = await client.getBookmakers();
-
-// Select specific bookmakers for your account
-await client.selectBookmakers('singbet,bet365');
-
-// Check which bookmakers you've selected
-const selected = await client.getSelectedBookmakers();
-
-// Clear selected bookmakers
-await client.clearSelectedBookmakers();
-```
-
-## API Reference
-
-### Sports & Leagues
-
-| Method | Description | Docs |
-|--------|-------------|------|
-| `getSports()` | Get all available sports | [Docs](https://docs.odds-api.io/api-reference/sports/get-sports) |
-| `getLeagues(sport)` | Get leagues for a sport | [Docs](https://docs.odds-api.io/api-reference/leagues/get-leagues) |
-
-### Events
-
-| Method | Description | Docs |
-|--------|-------------|------|
-| `getEvents(params)` | Get events with filters | [Docs](https://docs.odds-api.io/api-reference/events/get-events) |
-| `getEventById(eventId)` | Get specific event details | [Docs](https://docs.odds-api.io/api-reference/events/get-event-by-id) |
-| `getLiveEvents(sport)` | Get currently live events | [Docs](https://docs.odds-api.io/api-reference/events/get-live-events) |
-| `searchEvents(query)` | Search for events by keyword | [Docs](https://docs.odds-api.io/api-reference/events/search-events) |
-
-### Historical
-
-| Method | Description | Docs |
-|--------|-------------|------|
-| `getHistoricalEvents(params)` | Get finished historical events in a date range | [Docs](https://docs.odds-api.io/api-reference/historical/get-historical-events) |
-| `getHistoricalOdds(params)` | Get closing odds for a historical event | [Docs](https://docs.odds-api.io/api-reference/historical/get-historical-odds) |
-
-### Odds
-
-| Method | Description | Docs |
-|--------|-------------|------|
-| `getEventOdds(params)` | Get odds for an event | [Docs](https://docs.odds-api.io/api-reference/odds/get-event-odds) |
-| `getOddsMovement(params)` | Track odds changes | [Docs](https://docs.odds-api.io/api-reference/odds/get-odds-movements) |
-| `getOddsForMultipleEvents(params)` | Get odds for multiple events | [Docs](https://docs.odds-api.io/api-reference/odds/get-odds-for-multiple-events) |
-| `getUpdatedOddsSince(params)` | Get odds updated since timestamp. `markets` is required by the API from 15 October 2026 | [Docs](https://docs.odds-api.io/api-reference/odds/get-updated-event-odds-since-a-given-timestamp) |
-
-### Participants
-
-| Method | Description | Docs |
-|--------|-------------|------|
-| `getParticipants(params)` | Get participants/teams | [Docs](https://docs.odds-api.io/api-reference/participants/get-participants) |
-| `getParticipantById(id)` | Get participant by ID | [Docs](https://docs.odds-api.io/api-reference/participants/get-participant-by-id) |
-
-### Bookmakers
-
-| Method | Description | Docs |
-|--------|-------------|------|
-| `getBookmakers()` | Get all available bookmakers | [Docs](https://docs.odds-api.io/api-reference/bookmakers/get-bookmakers) |
-| `getSelectedBookmakers()` | Get your selected bookmakers | [Docs](https://docs.odds-api.io/api-reference/bookmakers/get-selected-bookmakers) |
-| `selectBookmakers(bookmakers)` | Select bookmakers for your account | [Docs](https://docs.odds-api.io/api-reference/bookmakers/select-bookmakers) |
-| `clearSelectedBookmakers()` | Clear bookmaker selection | [Docs](https://docs.odds-api.io/api-reference/bookmakers/clear-selected-bookmakers) |
-
-### Betting Analysis
-
-| Method | Description | Docs |
-|--------|-------------|------|
-| `getArbitrageBets(params)` | Find arbitrage opportunities | [Docs](https://docs.odds-api.io/api-reference/arbitrage-bets/get-arbitrage-betting-opportunities) |
-| `getValueBets(params)` | Find value bets | [Docs](https://docs.odds-api.io/api-reference/value-bets/get-value-bets) |
-| `getDroppingOdds(params)` | Track sharp bookmaker line movements | [Docs](https://docs.odds-api.io/api-reference/dropping-odds/get-dropping-odds) |
-
-## Error Handling
-
-The SDK includes custom error classes for better error handling:
-
-```typescript
-import {
-  OddsAPIClient,
-  OddsAPIError,
-  InvalidAPIKeyError,
-  RateLimitExceededError,
-  NotFoundError,
-  TimeoutError,
-  NetworkError
-} from 'odds-api-io';
-
-const client = new OddsAPIClient({ apiKey: 'your-api-key' });
-
-try {
-  const events = await client.getEvents({ sport: 'basketball' });
-} catch (error) {
-  if (error instanceof InvalidAPIKeyError) {
-    console.error('Your API key is invalid');
-  } else if (error instanceof RateLimitExceededError) {
-    console.error('Rate limit exceeded - wait before retrying');
-  } else if (error instanceof NotFoundError) {
-    console.error('Resource not found');
-  } else if (error instanceof TimeoutError) {
-    console.error('Request timeout');
-  } else if (error instanceof NetworkError) {
-    console.error('Network error');
-  } else if (error instanceof OddsAPIError) {
-    console.error('API error:', error.message);
+  markets: ['ML', 'Spread', 'Totals'], // required, max 40
+  intervalMs: 10_000,
+  signal: controller.signal,
+})) {
+  for (const event of batch.data) {
+    // merge by event, bookmaker and market name; an absent market has not changed
   }
 }
+```
+
+For live odds the WebSocket is cheaper than any poll interval.
+
+## WebSocket
+
+`OddsWebSocket` connects to `wss://api.odds-api.io/v3/ws`, tracks the highest `seq` and reconnects with `lastSeq`, so missed updates are replayed. In Node.js install the `ws` package (`npm install ws`); the server requires permessage-deflate compression, which `ws` and browsers negotiate by default. WebSocket access is a plan add-on.
+
+```typescript
+import { OddsAPIClient, OddsWebSocket } from 'odds-api-io';
+
+const client = new OddsAPIClient({ apiKey });
+const eventIds = [123456, 123457];
+const store = new Map();
+
+// 1. Snapshot with its sequence number
+const { data, seq } = await client.getOddsSnapshot({ eventIds, bookmakers: ['Bet365'], markets: ['ML', 'Totals'] });
+for (const event of data) for (const [book, markets] of Object.entries(event.bookmakers)) store.set(`${event.id}:${book}`, markets);
+
+// 2. Stream from that point
+const feed = new OddsWebSocket({
+  apiKey,
+  markets: ['ML', 'Totals'],          // required for the odds channel, max 40
+  channels: ['odds', 'scores', 'status'], // optional, default odds only
+  eventIds,                            // or sport / leagues, status: 'live' | 'prematch'
+  lastSeq: seq ?? undefined,
+});
+
+feed.on('resync_required', async () => {
+  // replay could not be served: rebuild from REST, then continue
+  const snap = await client.getOddsSnapshot({ eventIds, bookmakers: ['Bet365'], markets: ['ML', 'Totals'] });
+  feed.lastSeq = snap.seq ?? undefined;
+});
+feed.on('reconnecting', ({ attempt, delay, lastSeq }) => console.log(`reconnect #${attempt} in ${delay}ms from ${lastSeq}`));
+
+for await (const msg of feed) {
+  if (msg.type === 'created' || msg.type === 'updated') store.set(`${msg.id}:${msg.bookie}`, msg.markets); // replace, do not merge
+  if (msg.type === 'deleted' || msg.type === 'no_markets') store.delete(`${msg.id}:${msg.bookie}`);
+  if (msg.type === 'score') console.log(msg.id, msg.scores, msg.clock);
+}
+```
+
+Events: `open`, `message`, one per message type (`welcome`, `created`, `updated`, `deleted`, `no_markets`, `score`, `status`, `resync_required`, `replay_complete`), `reconnecting`, `close` and `error`. `feed.close()` stops it; `feed.lastSeq` is the resume point to persist.
+
+Close codes: 1012 (server restart) reconnects at once, 1013 (cooldown) waits at least 3 seconds, 1008 because a newer connection replaced this one stops instead of fighting it (two connections per key). A refused handshake (401, 403, 426) is not retried and rejects `connect()` / the iterator with `OddsWebSocketError`. Options: `reconnect` (default true), `maxReconnectAttempts`, `initialReconnectDelay`, `maxReconnectDelay`, `replayComplete` (default true) and `WebSocket` to pass your own implementation.
+
+## Historical odds and closing lines
+
+```typescript
+// Finished events for one league (31 days per call)
+const past = await client.getHistoricalEvents({
+  sport: 'football',
+  league: 'england-premier-league',
+  from: '2026-09-01T00:00:00Z',
+  to: '2026-09-30T23:59:59Z',
+});
+
+// Any range: fetched in 31-day windows
+for await (const event of client.iterateHistoricalEvents({ sport: 'football', league: 'england-premier-league', from: '2026-01-01T00:00:00Z', to: '2026-10-31T00:00:00Z' })) {
+  console.log(event.home, event.away, event.scores?.periods?.ft);
+}
+
+// Odds for one finished event
+const closing = await client.getHistoricalOdds({ eventId: past[0].id, bookmakers: ['Bet365'], markets: ['ML'] });
+
+// Closing lines for every settled event across up to 10 leagues (paid plans; 366 days per call, 100 per page)
+for await (const event of client.iterateClosingLines({
+  sport: 'football',
+  leagues: ['england-premier-league', 'spain-laliga'],
+  from: '2026-08-01T00:00:00Z',
+  to: '2026-10-31T23:59:59Z',
+  markets: ['ML', 'Totals'],
+  bookmakers: ['Bet365', 'SingBet'],
+})) {
+  console.log(event.id, event.bookmakers['Bet365']?.[0]?.odds[0]);
+}
+
+// Search finished events by team name
+const arsenal = await client.searchHistoricalEvents({ query: 'Arsenal', sport: 'football' });
+```
+
+## Settlement and grading
+
+Paid plans. `getSettlements` returns status, a `final` flag and final scores; `gradeBets` grades selections against the result. Batches over 50 are split for you.
+
+```typescript
+const { settlements, notFound } = await client.getSettlements([74919888, 73101436]);
+
+const { grades } = await client.gradeBets([
+  { ref: 'bet-1', eventId: 74919888, market: 'ML', side: 'home' },
+  { ref: 'bet-2', eventId: 74919888, market: 'Spread', hdp: -0.75, side: 'home' },
+  { ref: 'bet-3', eventId: 74919888, market: 'Correct Score', label: '2-1' },
+]);
+for (const g of grades) {
+  console.log(g.ref, g.result, g.reason, g.final); // 'won' | 'lost' | 'void' | 'half_won' | 'half_lost' | 'pending' | 'ungradeable'
+}
+```
+
+Re-send selections that are not `final`, at most once a minute.
+
+## Outrights (golf)
+
+Outrights are a paid add-on: PGA Tour, DP World Tour, LIV Golf and the majors. A key without the add-on gets a `ForbiddenError` whose message links to the billing page.
+
+```typescript
+import { ForbiddenError, isPriceRunner } from 'odds-api-io';
+
+try {
+  const tournaments = await client.getOutrights({ sport: 'golf', league: 'pga-tour' });
+  const odds = await client.getOutrightOdds({ id: tournaments[0].id, bookmakers: ['DraftKings', 'Betfair Exchange'] });
+
+  for (const market of odds.bookmakers['Betfair Exchange'] ?? []) {
+    // Winner, Top 5, Top 5 (Incl. Ties), Top 10, Top 10 (Incl. Ties), Top 20, Top 20 (Incl. Ties), Make Cut
+    for (const runner of market.odds.slice(0, 3)) {
+      if (isPriceRunner(runner)) console.log(market.name, runner.label, runner.odds, runner.layOdds);
+      else console.log(market.name, runner.label, runner.yes, runner.no); // Make Cut
+    }
+  }
+
+  const results = await client.getOutrightResults(tournaments[0].id);
+  console.log(results.winners['Top 10 (Incl. Ties)']);
+} catch (err) {
+  if (err instanceof ForbiddenError && err.isAddOnRequired) console.log(err.message);
+}
+```
+
+"Top N" settles a boundary tie under the bookmaker's dead-heat rules; "Top N (Incl. Ties)" pays it in full. They are separate markets.
+
+## Value bets, arbitrage and dropping odds
+
+```typescript
+const valueBets = await client.getValueBets({ bookmaker: 'Bet365', sport: 'football', includeEventDetails: true });
+valueBets.forEach((bet) => console.log(bet.market.name, bet.betSide, `${(bet.expectedValue * 100).toFixed(2)}% EV`));
+
+// Price gaps across your bookmakers. Prices move and bookmakers limit stakes, so check every leg before acting.
+const arbs = await client.getArbitrageBets({ bookmakers: ['Bet365', 'SingBet'], sport: 'football', markets: ['Totals'], minProfit: 1 });
+arbs.forEach((arb) => console.log(arb.profitMargin, arb.legs.map((l) => `${l.bookmaker} ${l.side} @ ${l.odds}`)));
+
+// Dropping odds from sharp bookmakers (paid plans)
+const drops = await client.getDroppingOdds({ sport: 'football', markets: ['ML'], minDrop: 10, sort: 'recent', includeEventDetails: true });
+drops.forEach((d) => console.log(`${d.market.name} ${d.betSide}: ${d.odds.opening} -> ${d.odds.current} (-${d.odds.drop.sinceOpening}%)`));
+```
+
+## Participants, logos and mappings
+
+```typescript
+const teams = await client.getParticipants({ sport: 'football', search: 'Chelsea' });
+
+// PNG crest; the URL carries your key, so proxy it with getParticipantLogo() for public pages
+const url = client.getParticipantLogoUrl(events[0].homeId!);
+const png = await client.getParticipantLogo(events[0].homeId!); // ArrayBuffer
+
+// A bookmaker's own market and outcome ids for our events (paid plans)
+const { data } = await client.getMappings({ bookmaker: 'Polymarket', eventId: 71515842 });
+for await (const row of client.iterateMappings({ bookmaker: 'Kalshi', sport: 'american-football' })) {
+  console.log(row.eventId, row.market, row.side, row.marketId, row.outcomeId);
+}
+```
+
+## Bookmakers
+
+```typescript
+const bookmakers = await client.getBookmakers(); // name, active, createdAt, status ('ok' | 'degraded' | 'down'), reason
+await client.selectBookmakers(['Bet365', 'SingBet']);
+const { bookmakers: selected } = await client.getSelectedBookmakers();
+await client.clearSelectedBookmakers(); // once every 12 hours
+```
+
+## Methods
+
+| Area | Method | Endpoint |
+|------|--------|----------|
+| Catalogue | `getSports()` | `GET /sports` |
+| | `getMarkets(sport?)` | `GET /markets` |
+| | `getLeagues(sport, { all? })` | `GET /leagues` |
+| | `getBookmakers()` | `GET /bookmakers` |
+| | `getSelectedBookmakers()` | `GET /bookmakers/selected` |
+| | `selectBookmakers(bookmakers)` | `PUT /bookmakers/selected/select` |
+| | `clearSelectedBookmakers()` | `PUT /bookmakers/selected/clear` |
+| Events | `getEvents(params)`, `iterateEvents(params, { pageSize?, maxPages? })` | `GET /events` |
+| | `getEventById(id)` | `GET /events/{id}` |
+| | `getLiveEvents(sport?)` | `GET /events/live` |
+| | `searchEvents(query, { status? })` | `GET /events/search` |
+| Odds | `getEventOdds(params)` | `GET /odds` |
+| | `getOddsForMultipleEvents(params)`, `getOddsSnapshot(params)` | `GET /odds/multi` |
+| | `getUpdatedOddsSince(params)`, `getUpdatedOddsSinceWithMeta(params)`, `pollUpdatedOdds(params)` | `GET /odds/updated` |
+| | `getOddsMovement(params)` | `GET /odds/movements` |
+| | `getOddsSummary(params)` | `GET /odds/summary` |
+| | `getOddsSummaryMulti(params)` | `GET /odds/summary/multi` |
+| Analysis | `getValueBets(params)` | `GET /value-bets` |
+| | `getArbitrageBets(params)` | `GET /arbitrage-bets` |
+| | `getDroppingOdds(params)`, `getDroppingOddsPage(params)`, `iterateDroppingOdds(params)` | `GET /dropping-odds` |
+| Historical | `getHistoricalEvents(params)`, `iterateHistoricalEvents(params)` | `GET /historical/events` |
+| | `searchHistoricalEvents(params)` | `GET /historical/events/search` |
+| | `getHistoricalOdds(params)` | `GET /historical/odds` |
+| | `getClosingLines(params)`, `iterateClosingLines(params)` | `GET /historical/closing-lines` |
+| Settlement | `getSettlements(eventIds)` | `GET /settlements` |
+| | `gradeBets(selections)` (alias `gradeSelections`) | `POST /settlements/grade` |
+| Outrights | `getOutrights(params)` | `GET /outrights` |
+| | `getOutrightOdds(params)` | `GET /outrights/odds` |
+| | `getOutrightResults(id)` | `GET /outrights/results` |
+| Participants | `getParticipants(params)` | `GET /participants` |
+| | `getParticipantById(id)` | `GET /participants/{id}` |
+| | `getParticipantLogo(id)`, `getParticipantLogoUrl(id)` | `GET /participants/{id}/logo` |
+| Mappings | `getMappings(params)`, `iterateMappings(params)` | `GET /mappings` |
+| WebSocket | `new OddsWebSocket(options)` | `wss://api.odds-api.io/v3/ws` |
+
+Full parameter and response reference: [docs.odds-api.io/api-reference](https://docs.odds-api.io/api-reference).
+
+## Errors
+
+Every error extends `OddsAPIError` and carries the server's own message, plus `status`, `body` and `rateLimit` when there was a response.
+
+| Class | When |
+|-------|------|
+| `BadRequestError` | 400: a parameter is missing or invalid (the message says which) |
+| `InvalidAPIKeyError` | 401 |
+| `ForbiddenError` | 403: the plan does not include the endpoint or bookmaker, or an add-on is missing (`isAddOnRequired`) |
+| `NotFoundError` | 404: the message often lists what does exist |
+| `RateLimitError` | 429, with `retryAfter` in seconds (`RateLimitExceededError` is the same class) |
+| `ServerError` | 5xx |
+| `TimeoutError`, `NetworkError` | no response |
+| `OddsWebSocketError` | WebSocket handshake refused or the helper gave up (`code` = HTTP status or close code) |
+
+```typescript
+import { OddsAPIError, RateLimitError, ForbiddenError } from 'odds-api-io';
+
+try {
+  await client.getClosingLines({ /* ... */ });
+} catch (err) {
+  if (err instanceof RateLimitError) console.log(`retry in ${err.retryAfter}s`);
+  else if (err instanceof ForbiddenError) console.log(err.message);
+  else if (err instanceof OddsAPIError) console.log(err.status, err.message);
+}
+
+console.log(client.lastRateLimit); // { limit, remaining, reset } from the last response
 ```
 
 ## Configuration
@@ -340,52 +386,49 @@ try {
 ```typescript
 const client = new OddsAPIClient({
   apiKey: 'your-api-key',
-  baseUrl: 'https://api2.odds-api.io/v3', // Optional, default shown
-  timeout: 10000 // Optional, default 10 seconds
+  baseUrl: 'https://api.odds-api.io/v3', // default
+  timeout: 10000,      // ms per attempt
+  maxRetries: 2,       // retries on 5xx, network errors and short 429 waits; 0 turns them off
+  maxRetryDelay: 10000, // a 429 asking for a longer wait is thrown, not waited out
 });
 ```
 
-## TypeScript Support
+Bookmaker selection changes (PUT) are never retried.
 
-This SDK is written in TypeScript and includes complete type definitions:
+## Migrating from 1.3
 
-```typescript
-import type {
-  Sport,
-  League,
-  Event,
-  HistoricalEvent,
-  Participant,
-  Bookmaker,
-  EventOdds,
-  HistoricalEventOdds,
-  ArbitrageBet,
-  ValueBet,
-  DroppingOddsEntry,
-  GetEventsParams,
-  GetHistoricalEventsParams,
-  GetHistoricalOddsParams
-} from 'odds-api-io';
-```
+1.5.0 aligns the types with what the API returns. Code that used the old, inaccurate field names needs updating:
+
+- `Event`: `date`, `home`, `away`, `homeId`, `awayId`, `status` (`pending | live | settled | cancelled`), `sport`/`league` as `{ name, slug }`, `scores.periods`.
+- Period keys are `p1`..`pN`, `ft`, `ot`, `ap`. The old `period1`, `overtime`, `penalties` and `fulltime` keys stop being served on 12 November 2026.
+- `EventOdds.bookmakers` is a map of bookmaker name to markets; `OddsMovement` has `opening`, `latest` and `movements`.
+- `ArbitrageBet` uses `profitMargin` and `legs[].side`; `ValueBet` uses `expectedValue` and `betSide`.
+- `Bookmaker` is `{ name, active, createdAt, status, reason }`; `getSelectedBookmakers()` returns `{ bookmakers, count }`.
+- `getDroppingOdds` now sends `markets` (the old `market` option was ignored by the API; it is still accepted and sent as `markets`).
+- Errors keep the server message instead of a fixed text.
+- The default base URL is `https://api.odds-api.io/v3`.
+
+## Examples
+
+See [`examples/`](./examples):
+
+- `basic-usage.ts` / `basic-usage.js`: getting started
+- `premier-league-odds.ts`: odds for a league
+- `odds-tracking.ts`: price history and the updated-odds delta
+- `arbitrage-betting.ts`: price gaps across bookmakers
+- `websocket-feed.ts`: REST snapshot plus `OddsWebSocket`
+- `golf-outrights-and-settlement.ts`: outrights and bet grading
 
 ## Plans and Limits
 
-An API key from a paid plan is required. Rate limits, bookmaker selection and WebSocket access depend on your plan; see [**odds-api.io/pricing**](https://odds-api.io/pricing) for details.
+An API key from a paid plan is required. Rate limits, bookmaker selection and WebSocket access depend on your plan; see [**odds-api.io/pricing**](https://odds-api.io/pricing?ref=npm).
 
 ## Resources
 
-- 📘 [**API Documentation**](https://docs.odds-api.io/)
-- 🌐 [**Odds-API.io Website**](https://odds-api.io)
-- 💳 [**Get Your API Key**](https://odds-api.io/pricing?ref=npm)
-- 🐛 [**Report Issues**](https://github.com/odds-api-io/odds-api-node/issues)
-
-## Examples Directory
-
-Check the [`examples/`](./examples) directory for more comprehensive examples:
-
-- `basic-usage.ts` / `basic-usage.js` - Getting started
-- `arbitrage-betting.ts` - Finding arbitrage opportunities
-- `odds-tracking.ts` - Monitoring odds movements
+- [API documentation](https://docs.odds-api.io/)
+- [Odds-API.io website](https://odds-api.io)
+- [Get your API key](https://odds-api.io/pricing?ref=npm)
+- [Report issues](https://github.com/odds-api-io/odds-api-node/issues)
 
 ## License
 
@@ -395,14 +438,11 @@ Check the [`examples/`](./examples) directory for more comprehensive examples:
 
 This is the official SDK for Odds-API.io. This tool is for informational purposes only and should not be used as the sole basis for betting decisions.
 
----
-
-Built with ❤️ for the sports betting and analytics community
 
 ## Citation
 
 If you use this package in research or a publication, please cite it. Citation metadata is in [CITATION.cff](CITATION.cff) (GitHub renders a "Cite this repository" button from it) and Zenodo metadata is in `.zenodo.json`.
 
 ```
-Outlier AS. odds-api-io: Official Node.js SDK for Odds-API.io (version 1.4.0). https://github.com/odds-api-io/odds-api-node
+Outlier AS. odds-api-io: Official Node.js SDK for Odds-API.io (version 1.5.0). https://github.com/odds-api-io/odds-api-node
 ```
