@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.1
+
+Republish of 1.5.0 (same code). 1.5.0 was staged on npm and not published.
+
 ## 1.5.0 (2026-11-06)
 
 Covers every public Odds-API.io v3 endpoint and adds a WebSocket helper. Includes the unpublished 1.4.0 changes below.
