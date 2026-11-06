@@ -4,7 +4,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "lib": ["ES2020"],
-    "declaration": false,
+    "declaration": true,
     "sourceMap": true,
     "outDir": "./dist/cjs",
     "rootDir": "./src",
