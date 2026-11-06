@@ -32,7 +32,7 @@ npm install odds-api-io
 
 ## Get Your API Key
 
-Visit [**odds-api.io/#pricing**](https://odds-api.io/#pricing) to get your API key.
+You need an API key from a paid plan. Visit [**odds-api.io/pricing**](https://odds-api.io/pricing) to get one.
 
 ## Quick Start
 
@@ -327,21 +327,15 @@ import type {
 } from 'odds-api-io';
 ```
 
-## Free Tier Limitations
+## Plans and Limits
 
-The free API tier has some restrictions:
-
-- **Limited bookmakers** - Only 2 bookmakers can be selected at once
-- **Rate limits** - Check the [API documentation](https://docs.odds-api.io/) for current limits
-- **No WebSocket** - Free tier uses HTTP requests only
-
-[**Upgrade your plan**](https://odds-api.io/#pricing) for full access.
+An API key from a paid plan is required. Rate limits, bookmaker selection and WebSocket access depend on your plan; see [**odds-api.io/pricing**](https://odds-api.io/pricing) for details.
 
 ## Resources
 
 - 📘 [**API Documentation**](https://docs.odds-api.io/)
 - 🌐 [**Odds-API.io Website**](https://odds-api.io)
-- 💳 [**Get Your API Key**](https://odds-api.io/#pricing)
+- 💳 [**Get Your API Key**](https://odds-api.io/pricing)
 - 🐛 [**Report Issues**](https://github.com/odds-api-io/odds-api-node/issues)
 
 ## Examples Directory
