@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.2
+
+### Fixed
+- `ValueBet.expectedValue` docs: the value is bookmaker odds / fair odds x 100, not a fraction. 103.42 is a 3.42% edge (edge % = `expectedValue - 100`). The README value-bets example now computes the edge that way, and the arbitrage example prints `profitMargin` as the percentage it already is.
+
 ## 1.5.1
 
 Republish of 1.5.0 (same code). 1.5.0 was staged on npm and not published.

@@ -422,7 +422,7 @@ export interface ValueBet {
     max: number | null;
   };
   betSide?: string;
-  /** 0.0523 means +5.23% EV. */
+  /** Bookmaker odds / fair odds x 100. 100 is fair, 103.42 is a 3.42% edge (edge % = expectedValue - 100); below 100 is a negative edge. */
   expectedValue: number;
   expectedValueUpdatedAt: string;
   firstSeenAt?: string;
