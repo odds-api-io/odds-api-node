@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.3
+
+First release published from GitHub Actions with npm/PyPI trusted publishing and provenance. No code changes.
+
 ## 1.5.2
 
 ### Fixed
