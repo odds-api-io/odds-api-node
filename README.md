@@ -275,11 +275,15 @@ try {
 
 ```typescript
 const valueBets = await client.getValueBets({ bookmaker: 'Bet365', sport: 'football', includeEventDetails: true });
-valueBets.forEach((bet) => console.log(bet.market.name, bet.betSide, `${(bet.expectedValue * 100).toFixed(2)}% EV`));
+// expectedValue is bookmaker odds / fair odds x 100, so the edge in percent is expectedValue - 100 (103.42 = 3.42% edge)
+valueBets
+  .filter((bet) => bet.expectedValue - 100 >= 3)
+  .forEach((bet) => console.log(bet.market.name, bet.betSide, `${(bet.expectedValue - 100).toFixed(2)}% edge`));
 
 // Price gaps across your bookmakers. Prices move and bookmakers limit stakes, so check every leg before acting.
 const arbs = await client.getArbitrageBets({ bookmakers: ['Bet365', 'SingBet'], sport: 'football', markets: ['Totals'], minProfit: 1 });
-arbs.forEach((arb) => console.log(arb.profitMargin, arb.legs.map((l) => `${l.bookmaker} ${l.side} @ ${l.odds}`)));
+// profitMargin is already a percentage (2.48 = 2.48%)
+arbs.forEach((arb) => console.log(`${arb.profitMargin.toFixed(2)}%`, arb.legs.map((l) => `${l.bookmaker} ${l.side} @ ${l.odds}`)));
 
 // Dropping odds from sharp bookmakers (paid plans)
 const drops = await client.getDroppingOdds({ sport: 'football', markets: ['ML'], minDrop: 10, sort: 'recent', includeEventDetails: true });
@@ -444,5 +448,5 @@ This is the official SDK for Odds-API.io. This tool is for informational purpose
 If you use this package in research or a publication, please cite it. Citation metadata is in [CITATION.cff](CITATION.cff) (GitHub renders a "Cite this repository" button from it) and Zenodo metadata is in `.zenodo.json`.
 
 ```
-Outlier AS. odds-api-io: Official Node.js SDK for Odds-API.io (version 1.5.1). https://github.com/odds-api-io/odds-api-node
+Outlier AS. odds-api-io: Official Node.js SDK for Odds-API.io (version 1.5.2). https://github.com/odds-api-io/odds-api-node
 ```
