@@ -106,6 +106,23 @@ describe('OddsWebSocket', () => {
     ws.close();
   });
 
+  test('emits clock messages without moving lastSeq', async () => {
+    const ws = feed();
+    const clocks = [];
+    ws.on('clock', (m) => clocks.push(m.clock.playedSeconds));
+    const p = ws.connect();
+    await tick();
+    const s = FakeSocket.last();
+    s.open();
+    await p;
+    s.send(welcome);
+    s.send(update(7));
+    s.send({ type: 'clock', timestamp: 2, id: '1', clock: { minute: 67, playedSeconds: 4023, period: 2, running: true } });
+    assert.deepEqual(clocks, [4023]);
+    assert.equal(ws.lastSeq, 7);
+    ws.close();
+  });
+
   test('reconnects after a drop and resumes with lastSeq', async () => {
     const ws = feed();
     const reconnecting = [];

@@ -102,6 +102,18 @@ export interface WsStatusMessage {
   clock?: Clock;
 }
 
+/**
+ * Current match clock of a live event, sent every 30 seconds while it changes
+ * (only for clocks with `playedSeconds` or `periodStartedAt`) on the `scores`
+ * and `status` channels. Count forward from `playedSeconds` while `running`.
+ */
+export interface WsClockMessage {
+  type: 'clock';
+  timestamp: number;
+  id: string;
+  clock: Clock;
+}
+
 /** Replay could not be served: rebuild from a REST snapshot (`getOddsSnapshot`). The connection stays open. */
 export interface WsResyncRequiredMessage {
   type: 'resync_required';
@@ -122,6 +134,7 @@ export type WsMessage =
   | WsOddsMessage
   | WsScoreMessage
   | WsStatusMessage
+  | WsClockMessage
   | WsResyncRequiredMessage
   | WsReplayCompleteMessage;
 
@@ -147,6 +160,7 @@ export interface OddsWebSocketEvents {
   no_markets: (message: WsOddsMessage) => void;
   score: (message: WsScoreMessage) => void;
   status: (message: WsStatusMessage) => void;
+  clock: (message: WsClockMessage) => void;
   resync_required: (message: WsResyncRequiredMessage) => void;
   replay_complete: (message: WsReplayCompleteMessage) => void;
   close: (info: WsCloseInfo) => void;

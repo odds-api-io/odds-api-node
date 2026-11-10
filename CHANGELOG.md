@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.4
+
+### Added
+- `WsClockMessage` and the `clock` WebSocket event: the server sends the current match clock of each live event every 30 seconds on the `scores` and `status` channels. Count forward from `playedSeconds` while `running` is true and resync on every clock.
+
 ## 1.5.3
 
 First release published from GitHub Actions with npm/PyPI trusted publishing and provenance. No code changes.
