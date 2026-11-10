@@ -36,6 +36,7 @@ export type {
   WsOddsMessage,
   WsScoreMessage,
   WsStatusMessage,
+  WsClockMessage,
   WsResyncRequiredMessage,
   WsReplayCompleteMessage,
   WsCloseInfo,
