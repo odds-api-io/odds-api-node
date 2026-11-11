@@ -58,8 +58,12 @@ Odds come from **450+ bookmakers**, including Bet365, DraftKings, FanDuel, Betfa
 
 ## Documentation
 
-- [API documentation](https://docs.odds-api.io/)
-- [API reference](https://docs.odds-api.io/api-reference)
+- [Quickstart: make your first request](https://docs.odds-api.io/quickstart)
+- [Node.js, Python and R SDK guide](https://docs.odds-api.io/guides/sdks)
+- [Fetching pre-match and live odds](https://docs.odds-api.io/guides/fetching-odds)
+- [Stream live odds over WebSocket](https://docs.odds-api.io/guides/websockets)
+- [Find value bets](https://docs.odds-api.io/guides/value-bets) and [arbitrage opportunities](https://docs.odds-api.io/guides/arbitrage-bets)
+- [Full API reference](https://docs.odds-api.io/api-reference/introduction)
 - [AI and vibe coding guide](https://docs.odds-api.io/ai-vibe-coding)
 
 ## Features
@@ -354,7 +358,7 @@ await client.clearSelectedBookmakers(); // once every 12 hours
 | Mappings | `getMappings(params)`, `iterateMappings(params)` | `GET /mappings` |
 | WebSocket | `new OddsWebSocket(options)` | `wss://api.odds-api.io/v3/ws` |
 
-Full parameter and response reference: [docs.odds-api.io/api-reference](https://docs.odds-api.io/api-reference).
+Full parameter and response reference: [docs.odds-api.io/api-reference](https://docs.odds-api.io/api-reference/introduction).
 
 ## Errors
 
