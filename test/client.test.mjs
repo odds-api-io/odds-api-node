@@ -323,6 +323,30 @@ describe('settlement', () => {
   });
 });
 
+describe('same game parlays', () => {
+  test('getSgpBookmakers and getSgpLegs send GET queries', async () => {
+    const { client, calls, q } = setup([[{ name: 'DraftKings', sports: ['basketball'], maxLegs: 10, prebuilt: false, jurisdiction: 'US-WV', status: 'live' }], { eventId: 1, legs: [], hasMore: false }]);
+    const books = await client.getSgpBookmakers('basketball');
+    assert.equal(books[0].maxLegs, 10);
+    assert.equal(calls[0].url.pathname, '/v3/sgp/bookmakers');
+    assert.deepEqual(q(0), { sport: 'basketball', apiKey: 'secret' });
+    await client.getSgpLegs({ eventId: 1, bookmakers: ['DraftKings'], markets: ['ML', 'Totals'], limit: 50, skip: 10 });
+    assert.equal(calls[1].url.pathname, '/v3/sgp/legs');
+    assert.deepEqual(q(1), { eventId: '1', bookmakers: 'DraftKings', markets: 'ML,Totals', limit: '50', skip: '10', apiKey: 'secret' });
+  });
+
+  test('quoteSgp POSTs a JSON body with the key in the query', async () => {
+    const quote = { bookmaker: 'DraftKings', status: 'ok', price: '3.38', legsMultiplied: '3.50' };
+    const { client, calls } = setup([{ eventId: 1, quotes: [quote] }]);
+    const res = await client.quoteSgp({ eventId: 1, bookmakers: ['DraftKings'], legs: [{ legId: '1|ML|||home' }, { legId: '1|Totals|221.5||over', expectedPrice: '1.95' }] });
+    assert.equal(res.quotes[0].price, '3.38');
+    assert.equal(calls[0].init.method, 'POST');
+    assert.equal(calls[0].url.pathname, '/v3/sgp/quote');
+    assert.equal(calls[0].url.searchParams.get('apiKey'), 'secret');
+    assert.deepEqual(JSON.parse(calls[0].init.body), { eventId: 1, bookmakers: 'DraftKings', legs: [{ legId: '1|ML|||home' }, { legId: '1|Totals|221.5||over', expectedPrice: '1.95' }] });
+  });
+});
+
 describe('outrights', () => {
   test('getOutrights, getOutrightOdds, getOutrightResults', async () => {
     const odds = {

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Same game parlays: `getSgpBookmakers`, `getSgpLegs` and `quoteSgp` for `GET /sgp/bookmakers`, `GET /sgp/legs` and `POST /sgp/quote`, with types.
+
 ## 1.5.4 (2026-11-13)
 
 ### Docs
