@@ -49,6 +49,11 @@ import type {
   GetOutrightsParams,
   GetOutrightOddsParams,
   GetMappingsParams,
+  GetSgpLegsParams,
+  QuoteSgpParams,
+  SgpBookmaker,
+  SgpLegsResponse,
+  SgpQuoteResponse,
   PageOptions,
   CommaList,
 } from './types.js';
@@ -816,6 +821,53 @@ export class OddsAPIClient {
   /** Same as `gradeBets` (the API operation is called GradeSelections). */
   async gradeSelections(selections: GradeSelection[]): Promise<GradesResponse> {
     return this.gradeBets(selections);
+  }
+
+  // ============================================================================
+  // SAME GAME PARLAYS (enabled per key; a key without it gets ForbiddenError)
+  // ============================================================================
+
+  /** Bookmakers that can quote same game parlays, optionally for one sport. */
+  async getSgpBookmakers(sport?: string): Promise<SgpBookmaker[]> {
+    return this.get<SgpBookmaker[]>('sgp/bookmakers', { sport });
+  }
+
+  /**
+   * The legs of one pre-match event that can go into a parlay, with a `legId`
+   * for each and whether each bookmaker can combine it.
+   *
+   * @example
+   * ```typescript
+   * const { legs } = await client.getSgpLegs({ eventId: 61234567, bookmakers: ['DraftKings'], markets: ['ML', 'Totals'] });
+   * ```
+   */
+  async getSgpLegs(params: GetSgpLegsParams): Promise<SgpLegsResponse> {
+    return this.get<SgpLegsResponse>('sgp/legs', {
+      ...params,
+      bookmakers: joinList(params.bookmakers),
+      markets: joinList(params.markets),
+    });
+  }
+
+  /**
+   * Quote 2 to 10 legs as a same game parlay at each bookmaker. Every requested
+   * bookmaker gets one entry in `quotes`; check `status` and `nextAction`.
+   *
+   * @example
+   * ```typescript
+   * const { quotes } = await client.quoteSgp({
+   *   eventId: 61234567,
+   *   bookmakers: ['DraftKings'],
+   *   legs: [{ legId: '61234567|ML|||home' }, { legId: '61234567|Totals|221.5||over' }],
+   * });
+   * ```
+   */
+  async quoteSgp(params: QuoteSgpParams): Promise<SgpQuoteResponse> {
+    const { data } = await this.send<SgpQuoteResponse>('sgp/quote', {
+      method: 'POST',
+      body: { ...params, bookmakers: joinList(params.bookmakers) },
+    });
+    return data;
   }
 
   // ============================================================================

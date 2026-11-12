@@ -247,6 +247,20 @@ for (const g of grades) {
 
 Re-send selections that are not `final`, at most once a minute.
 
+## Same game parlays
+
+Enabled per key; without it you get a `ForbiddenError`. List the legs of a pre-match event, then quote 2 to 10 of them. Each bookmaker answers with a price (decimal string) or a `status` and `nextAction`.
+
+```typescript
+const { legs } = await client.getSgpLegs({ eventId: 61234567, bookmakers: ['DraftKings'], markets: ['ML', 'Totals'] });
+const { quotes } = await client.quoteSgp({
+  eventId: 61234567,
+  bookmakers: ['DraftKings'],
+  legs: legs.slice(0, 2).map((l) => ({ legId: l.legId })),
+});
+console.log(quotes[0].status, quotes[0].price, quotes[0].links?.desktop);
+```
+
 ## Outrights (golf)
 
 Outrights are a paid add-on: PGA Tour, DP World Tour, LIV Golf and the majors. A key without the add-on gets a `ForbiddenError` whose message links to the billing page.
@@ -349,6 +363,9 @@ await client.clearSelectedBookmakers(); // once every 12 hours
 | | `getClosingLines(params)`, `iterateClosingLines(params)` | `GET /historical/closing-lines` |
 | Settlement | `getSettlements(eventIds)` | `GET /settlements` |
 | | `gradeBets(selections)` (alias `gradeSelections`) | `POST /settlements/grade` |
+| Same game parlays | `getSgpBookmakers(sport?)` | `GET /sgp/bookmakers` |
+| | `getSgpLegs(params)` | `GET /sgp/legs` |
+| | `quoteSgp(params)` | `POST /sgp/quote` |
 | Outrights | `getOutrights(params)` | `GET /outrights` |
 | | `getOutrightOdds(params)` | `GET /outrights/odds` |
 | | `getOutrightResults(id)` | `GET /outrights/results` |

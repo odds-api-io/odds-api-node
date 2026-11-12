@@ -557,6 +557,123 @@ export interface GradesResponse {
 }
 
 // ============================================================================
+// SAME GAME PARLAYS
+// ============================================================================
+
+export type SgpBookmakerStatus = 'live' | 'paused' | 'degraded';
+
+export interface SgpBookmaker {
+  name: string;
+  sports: string[];
+  maxLegs: number;
+  prebuilt: boolean;
+  jurisdiction: string;
+  status: SgpBookmakerStatus;
+}
+
+export interface GetSgpLegsParams {
+  eventId: number | string;
+  bookmakers: CommaList;
+  markets?: CommaList;
+  /** Default 200, max 1000. */
+  limit?: number;
+  skip?: number;
+}
+
+export interface SgpLegBook {
+  /** The bookmaker can combine this leg into a same game parlay. */
+  eligible: boolean;
+  /** Decimal odds string. */
+  price?: string;
+  updatedAt?: string;
+}
+
+export interface SgpLeg {
+  /** Copy into `quoteSgp`; do not build by hand. */
+  legId: string;
+  market: string;
+  hdp?: number;
+  label?: string;
+  side: string;
+  bookmakers: Record<string, SgpLegBook>;
+}
+
+export interface SgpLegsResponse {
+  eventId: number;
+  date?: string;
+  status?: string;
+  legs: SgpLeg[];
+  hasMore: boolean;
+}
+
+/** Give either `legId`, or `market`, `hdp`, `label` and `side` as served on /odds. */
+export interface SgpQuoteLeg {
+  legId?: string;
+  market?: MarketName;
+  hdp?: number;
+  label?: string;
+  side?: string;
+  /** The single price you saw, as a decimal string; the leg is flagged `priceMoved` when it differs. */
+  expectedPrice?: string;
+}
+
+export interface QuoteSgpParams {
+  eventId: number | string;
+  bookmakers: CommaList;
+  /** 2 to 10 legs. */
+  legs: SgpQuoteLeg[];
+}
+
+export interface SgpQuoteLegResult {
+  legId: string;
+  /** Current single price at this bookmaker, a decimal string. */
+  price?: string;
+  hdp?: number;
+  priceMoved?: boolean;
+}
+
+export interface SgpQuoteLinks {
+  desktop?: string;
+  mobile?: string;
+}
+
+export type SgpQuoteStatus =
+  | 'ok'
+  | 'not_combinable'
+  | 'leg_unavailable'
+  | 'suspended'
+  | 'unsupported'
+  | 'timeout'
+  | 'temporarily_unavailable';
+
+export interface SgpBookQuote {
+  bookmaker: string;
+  status: SgpQuoteStatus;
+  /** Parlay price, a decimal string. */
+  price?: string;
+  legsMultiplied?: string;
+  priceAdjustmentPct?: string;
+  legs?: SgpQuoteLegResult[];
+  /** The legs that made the quote fail (`leg_unavailable`). */
+  legIds?: string[];
+  links?: SgpQuoteLinks;
+  jurisdiction?: string;
+  durationMs?: number;
+  quotedAt?: string;
+  cached?: boolean;
+  cacheExpiresAt?: string;
+  retryable?: boolean;
+  retryAfter?: number;
+  nextAction?: string;
+  reason?: string;
+}
+
+export interface SgpQuoteResponse {
+  eventId: number;
+  quotes: SgpBookQuote[];
+}
+
+// ============================================================================
 // OUTRIGHTS
 // ============================================================================
 
