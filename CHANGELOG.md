@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.5.4 (2026-11-13)
 
 ### Docs
 - `getMarkets()`, `getBookmakers()`, `MarketName` and the `markets` option link to the market reference at https://odds-api.io/markets and bookmaker coverage at https://odds-api.io/sportsbooks#coverage.
