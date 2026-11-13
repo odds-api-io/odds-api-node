@@ -8,7 +8,10 @@
 /** A comma-separated string, or an array the SDK joins with commas. */
 export type CommaList<T extends string | number = string> = string | readonly T[];
 
-/** Market names the API serves. Any other served name is accepted too; see `getMarkets()`. */
+/**
+ * Market names the API serves. Any other served name is accepted too; see `getMarkets()`
+ * or the market reference per sport at https://odds-api.io/markets.
+ */
 export type MarketName =
   | 'ML'
   | 'Spread'
@@ -754,7 +757,10 @@ export interface GetOddsParams {
   eventId: string | number;
   /** Bookmaker names, max 30. */
   bookmakers: CommaList;
-  /** Market names, max 40. Strongly recommended: a full response can be very large. */
+  /**
+   * Market names, max 40, as listed at https://odds-api.io/markets.
+   * Strongly recommended: a full response can be very large.
+   */
   markets?: CommaList<MarketName>;
   /** Adds the WebSocket sequence as the X-OddsAPI-Seq header (see `getOddsSnapshot`). */
   includeSeq?: boolean;

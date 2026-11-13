@@ -327,7 +327,8 @@ export class OddsAPIClient {
   /**
    * The market catalogue: exact market names per sport, with shape, period and
    * whether each is served prematch and live. Use it before passing `markets`
-   * to other calls. No API key needed.
+   * to other calls. No API key needed. The same catalogue is browsable at
+   * https://odds-api.io/markets (for example https://odds-api.io/markets/football).
    *
    * @example
    * ```typescript
@@ -659,7 +660,10 @@ export class OddsAPIClient {
   // BOOKMAKERS
   // ============================================================================
 
-  /** All bookmakers with their current status. No API key needed. */
+  /**
+   * All bookmakers with their current status. No API key needed.
+   * Coverage by sport: https://odds-api.io/sportsbooks#coverage
+   */
   async getBookmakers(): Promise<Bookmaker[]> {
     return this.get<Bookmaker[]>('bookmakers', undefined, false);
   }
