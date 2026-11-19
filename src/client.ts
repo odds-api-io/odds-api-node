@@ -824,7 +824,7 @@ export class OddsAPIClient {
   }
 
   // ============================================================================
-  // SAME GAME PARLAYS (enabled per key; a key without it gets ForbiddenError)
+  // SAME GAME PARLAYS (included in all paid plans)
   // ============================================================================
 
   /** Bookmakers that can quote same game parlays, optionally for one sport. */

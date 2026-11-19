@@ -575,7 +575,7 @@ export interface SgpBookmaker {
 
 export interface GetSgpLegsParams {
   eventId: number | string;
-  /** Max 8, from the key's bookmaker selection. */
+  /** Max 8 per request, from the key's bookmaker selection. */
   bookmakers: CommaList;
   /** Max 40, case-insensitive. */
   markets?: CommaList;
@@ -646,7 +646,7 @@ export interface SgpQuoteLeg {
 
 export interface QuoteSgpParams {
   eventId: number | string;
-  /** Max 8. */
+  /** Max 8 per request. */
   bookmakers: CommaList;
   /** 2 to 10 legs. */
   legs: SgpQuoteLeg[];

@@ -249,7 +249,7 @@ Re-send selections that are not `final`, at most once a minute.
 
 ## Same game parlays
 
-Enabled per key; without it you get a `ForbiddenError`. List the legs of a pre-match event, then quote 2 to 10 of them. Each bookmaker answers with a price (decimal string) or a `status` and `nextAction`. Branch on those two; `reason` is a sentence for display and its wording can change.
+Included in all paid plans. `getSgpBookmakers()` (`GET /v3/sgp/bookmakers`) returns the bookmakers that quote same game parlays right now; more are being added. List the legs of a pre-match event, then quote 2 to 10 of them. Each bookmaker answers with a price (decimal string) or a `status` and `nextAction`. Branch on those two; `reason` is a sentence for display and its wording can change.
 
 ```typescript
 import type { SgpLeg } from 'odds-api-io';
