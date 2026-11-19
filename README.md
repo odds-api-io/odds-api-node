@@ -249,17 +249,30 @@ Re-send selections that are not `final`, at most once a minute.
 
 ## Same game parlays
 
-Enabled per key; without it you get a `ForbiddenError`. List the legs of a pre-match event, then quote 2 to 10 of them. Each bookmaker answers with a price (decimal string) or a `status` and `nextAction`.
+Enabled per key; without it you get a `ForbiddenError`. List the legs of a pre-match event, then quote 2 to 10 of them. Each bookmaker answers with a price (decimal string) or a `status` and `nextAction`. Branch on those two; `reason` is a sentence for display and its wording can change.
 
 ```typescript
-const { legs } = await client.getSgpLegs({ eventId: 61234567, bookmakers: ['DraftKings'], markets: ['ML', 'Totals'] });
-const { quotes } = await client.quoteSgp({
-  eventId: 61234567,
-  bookmakers: ['DraftKings'],
-  legs: legs.slice(0, 2).map((l) => ({ legId: l.legId })),
-});
-console.log(quotes[0].status, quotes[0].price, quotes[0].links?.desktop);
+import type { SgpLeg } from 'odds-api-io';
+
+const eventId = 61234567;
+const listed = await client.getSgpLegs({ eventId, bookmakers: ['DraftKings', 'BetMGM'], markets: ['ML', 'Totals'] });
+// A bookmaker whose legs could not be checked says why; its legs all read eligible: false.
+const books = listed.bookmakers.filter((b) => b.status === 'ok').map((b) => b.bookmaker);
+const eligible = (l: SgpLeg) => books.every((b) => l.bookmakers[b]?.eligible);
+const ml = listed.legs.find((l) => l.market === 'ML' && l.side === 'home' && eligible(l));
+const total = listed.legs.find((l) => l.market === 'Totals' && l.side === 'over' && eligible(l));
+
+if (ml && total && books.length) {
+  const { quotes } = await client.quoteSgp({ eventId, bookmakers: books, legs: [{ legId: ml.legId }, { legId: total.legId }] });
+  for (const q of quotes) {
+    if (q.status === 'ok') console.log(q.bookmaker, q.price, 'vs', q.legsMultiplied, q.links?.desktop);
+    else if (q.nextAction === 'retry' || q.nextAction === 'retry_later') console.log(q.bookmaker, `retry in ${q.retryAfter ?? 2}s`);
+    else console.log(q.bookmaker, q.nextAction, q.legIds ?? [], q.reason);
+  }
+}
 ```
+
+`nextAction` is one of `change_legs`, `remove_leg` (drop the legs in `legIds`), `refresh_legs` (call `getSgpLegs` again), `retry`, `retry_later` (wait `retryAfter` seconds) or `choose_other_bookmaker`. A quote can take up to 8 seconds, and at most 2 quotes run at once per account. See the [same game parlay guide](https://docs.odds-api.io/guides/sgp).
 
 ## Outrights (golf)
 
@@ -469,5 +482,5 @@ This is the official SDK for Odds-API.io. This tool is for informational purpose
 If you use this package in research or a publication, please cite it. Citation metadata is in [CITATION.cff](CITATION.cff) (GitHub renders a "Cite this repository" button from it) and Zenodo metadata is in `.zenodo.json`.
 
 ```
-Outlier AS. odds-api-io: Official Node.js SDK for Odds-API.io (version 1.5.4). https://github.com/odds-api-io/odds-api-node
+Outlier AS. odds-api-io: Official Node.js SDK for Odds-API.io (version 1.6.0). https://github.com/odds-api-io/odds-api-node
 ```

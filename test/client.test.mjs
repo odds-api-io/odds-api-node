@@ -325,14 +325,15 @@ describe('settlement', () => {
 
 describe('same game parlays', () => {
   test('getSgpBookmakers and getSgpLegs send GET queries', async () => {
-    const { client, calls, q } = setup([[{ name: 'DraftKings', sports: ['basketball'], maxLegs: 10, prebuilt: false, jurisdiction: 'US-WV', status: 'live' }], { eventId: 1, legs: [], hasMore: false }]);
+    const { client, calls, q } = setup([[{ name: 'DraftKings', sports: ['basketball'], maxLegs: 10, prebuilt: false, jurisdiction: 'US-WV', status: 'live' }], { eventId: 1, status: 'pending', date: '2026-11-14T00:30:00Z', bookmakers: [{ bookmaker: 'DraftKings', status: 'ok' }, { bookmaker: 'Hard Rock', status: 'temporarily_unavailable', retryable: true, nextAction: 'retry_later', reason: 'x', retryAfter: 2 }], legs: [], hasMore: false }]);
     const books = await client.getSgpBookmakers('basketball');
     assert.equal(books[0].maxLegs, 10);
     assert.equal(calls[0].url.pathname, '/v3/sgp/bookmakers');
     assert.deepEqual(q(0), { sport: 'basketball', apiKey: 'secret' });
-    await client.getSgpLegs({ eventId: 1, bookmakers: ['DraftKings'], markets: ['ML', 'Totals'], limit: 50, skip: 10 });
+    const listed = await client.getSgpLegs({ eventId: 1, bookmakers: ['DraftKings', 'Hard Rock'], markets: ['ML', 'Totals'], limit: 50, skip: 10 });
+    assert.deepEqual(listed.bookmakers.map((b) => [b.bookmaker, b.status, b.nextAction]), [['DraftKings', 'ok', undefined], ['Hard Rock', 'temporarily_unavailable', 'retry_later']]);
     assert.equal(calls[1].url.pathname, '/v3/sgp/legs');
-    assert.deepEqual(q(1), { eventId: '1', bookmakers: 'DraftKings', markets: 'ML,Totals', limit: '50', skip: '10', apiKey: 'secret' });
+    assert.deepEqual(q(1), { eventId: '1', bookmakers: 'DraftKings,Hard Rock', markets: 'ML,Totals', limit: '50', skip: '10', apiKey: 'secret' });
   });
 
   test('quoteSgp POSTs a JSON body with the key in the query', async () => {
