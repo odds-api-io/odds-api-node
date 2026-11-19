@@ -325,7 +325,7 @@ describe('settlement', () => {
 
 describe('same game parlays', () => {
   test('getSgpBookmakers and getSgpLegs send GET queries', async () => {
-    const { client, calls, q } = setup([[{ name: 'DraftKings', sports: ['basketball'], maxLegs: 10, prebuilt: false, jurisdiction: 'US-WV', status: 'live' }], { eventId: 1, status: 'pending', date: '2026-11-14T00:30:00Z', bookmakers: [{ bookmaker: 'DraftKings', status: 'ok' }, { bookmaker: 'Hard Rock', status: 'temporarily_unavailable', retryable: true, nextAction: 'retry_later', reason: 'x', retryAfter: 2 }], legs: [], hasMore: false }]);
+    const { client, calls, q } = setup([[{ name: 'DraftKings', sports: ['basketball'], maxLegs: 10, jurisdiction: 'US-WV', status: 'live' }], { eventId: 1, status: 'pending', date: '2026-11-14T00:30:00Z', bookmakers: [{ bookmaker: 'DraftKings', status: 'ok' }, { bookmaker: 'Hard Rock', status: 'temporarily_unavailable', retryable: true, nextAction: 'retry_later', reason: 'x', retryAfter: 2 }], legs: [], hasMore: false }]);
     const books = await client.getSgpBookmakers('basketball');
     assert.equal(books[0].maxLegs, 10);
     assert.equal(calls[0].url.pathname, '/v3/sgp/bookmakers');
