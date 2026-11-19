@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.0 (2026-11-19)
+
+### Added
+- Same game parlays: `getSgpBookmakers`, `getSgpLegs` and `quoteSgp` for `GET /sgp/bookmakers`, `GET /sgp/legs` and `POST /sgp/quote`, with types.
+- `SgpLegsResponse.bookmakers`: per requested bookmaker, whether its legs could be checked (`status`, `retryable`, `nextAction`, `reason`, `retryAfter`).
+- `SgpNextAction` and `SgpSide` types. `reason` on a quote is a sentence for display; branch on `status` and `nextAction`.
+
 ## 1.5.4 (2026-11-13)
 
 ### Docs
