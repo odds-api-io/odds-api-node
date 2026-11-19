@@ -557,6 +557,173 @@ export interface GradesResponse {
 }
 
 // ============================================================================
+// SAME GAME PARLAYS
+// ============================================================================
+
+export type SgpBookmakerStatus = 'live' | 'paused' | 'degraded';
+
+export interface SgpBookmaker {
+  name: string;
+  sports: string[];
+  maxLegs: number;
+  /** The region the parlay price applies to, e.g. `US-NJ` or `AT`. */
+  jurisdiction: string;
+  /** `paused`: quotes are switched off for now. `degraded`: the status cannot be checked right now. */
+  status: SgpBookmakerStatus;
+}
+
+export interface GetSgpLegsParams {
+  eventId: number | string;
+  /** Max 8 per request, from the key's bookmaker selection. */
+  bookmakers: CommaList;
+  /** Max 40, case-insensitive. */
+  markets?: CommaList;
+  /** Default 200, max 1000. */
+  limit?: number;
+  skip?: number;
+}
+
+export type SgpSide = 'home' | 'away' | 'draw' | 'over' | 'under' | 'yes' | 'no';
+
+export interface SgpLegBook {
+  /** The bookmaker can combine this leg into a same game parlay. */
+  eligible: boolean;
+  /** Current single price, a decimal string. Left out when the bookmaker does not price the leg. */
+  price?: string;
+  updatedAt?: string;
+}
+
+export interface SgpLeg {
+  /** Copy into `quoteSgp`; do not build by hand. */
+  legId: string;
+  market: string;
+  hdp?: number;
+  label?: string;
+  side: SgpSide;
+  bookmakers: Record<string, SgpLegBook>;
+}
+
+export type SgpLegsBookmakerStatus = 'ok' | 'leg_unavailable' | 'unsupported' | 'temporarily_unavailable';
+
+/**
+ * Whether a requested bookmaker's legs could be checked. When `status` is not
+ * `ok`, every leg reads `eligible: false` at that bookmaker.
+ */
+export interface SgpLegsBookmaker {
+  bookmaker: string;
+  status: SgpLegsBookmakerStatus;
+  retryable?: boolean;
+  nextAction?: 'retry_later' | 'choose_other_bookmaker';
+  /** A readable sentence for display; its wording can change, so branch on `status` and `nextAction`. */
+  reason?: string;
+  /** Seconds to wait before calling `getSgpLegs` again. */
+  retryAfter?: number;
+}
+
+export interface SgpLegsResponse {
+  eventId: number;
+  status: string;
+  date: string;
+  /** One entry per requested bookmaker, in request order. */
+  bookmakers: SgpLegsBookmaker[];
+  legs: SgpLeg[];
+  /** Call again with a higher `skip` while true. */
+  hasMore: boolean;
+}
+
+/** Give either `legId`, or `market`, `hdp`, `label` and `side` as served on /odds. */
+export interface SgpQuoteLeg {
+  legId?: string;
+  market?: MarketName;
+  /** At most 4 decimals. */
+  hdp?: number;
+  label?: string;
+  side?: SgpSide;
+  /** The single price you saw, as a decimal string; the leg is flagged `priceMoved` when it differs. */
+  expectedPrice?: string;
+}
+
+export interface QuoteSgpParams {
+  eventId: number | string;
+  /** Max 8 per request. */
+  bookmakers: CommaList;
+  /** 2 to 10 legs. */
+  legs: SgpQuoteLeg[];
+}
+
+export interface SgpQuoteLegResult {
+  legId: string;
+  /** Current single price at this bookmaker, a decimal string. */
+  price?: string;
+  hdp?: number;
+  priceMoved?: boolean;
+}
+
+export interface SgpQuoteLinks {
+  desktop: string | null;
+  mobile: string | null;
+}
+
+export type SgpQuoteStatus =
+  | 'ok'
+  | 'not_combinable'
+  | 'leg_unavailable'
+  | 'suspended'
+  | 'unsupported'
+  | 'timeout'
+  | 'temporarily_unavailable';
+
+export type SgpNextAction =
+  | 'change_legs'
+  | 'remove_leg'
+  | 'refresh_legs'
+  | 'retry'
+  | 'retry_later'
+  | 'choose_other_bookmaker';
+
+export interface SgpBookQuote {
+  bookmaker: string;
+  status: SgpQuoteStatus;
+  /** Parlay price, a decimal string. Only on `ok`. */
+  price?: string;
+  /** The current single prices multiplied together. Only on `ok`. */
+  legsMultiplied?: string;
+  /** How far `price` sits from `legsMultiplied`, in percent. Only on `ok`. */
+  priceAdjustmentPct?: string;
+  legs: SgpQuoteLegResult[];
+  /**
+   * The legs that made the quote fail (always on `leg_unavailable`; on
+   * `not_combinable` and `suspended` when the bookmaker names them), or on `ok`
+   * with reason `redundant_leg` the legs the bookmaker ignored as implied by the others.
+   */
+  legIds?: string[];
+  /** Betslip links. Only on `ok`. */
+  links?: SgpQuoteLinks;
+  jurisdiction?: string;
+  retryable?: boolean;
+  /** Set on every status but `ok`: what to do next. */
+  nextAction?: SgpNextAction;
+  /**
+   * A readable sentence for display. Its wording can change, so branch on
+   * `status` and `nextAction`. On `ok` the only reason is the code `redundant_leg`.
+   */
+  reason?: string;
+  /** Seconds to wait before trying again. */
+  retryAfter?: number;
+  durationMs: number;
+  quotedAt?: string;
+  /** True when the price comes from an identical quote made in the last 10 seconds. */
+  cached: boolean;
+  cacheExpiresAt?: string;
+}
+
+export interface SgpQuoteResponse {
+  eventId: number;
+  /** One entry per requested bookmaker, in request order. */
+  quotes: SgpBookQuote[];
+}
+
+// ============================================================================
 // OUTRIGHTS
 // ============================================================================
 
