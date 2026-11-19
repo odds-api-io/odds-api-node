@@ -1,7 +1,7 @@
 /**
  * Odds-API.io Node.js SDK
  *
- * Official Node.js client for Odds-API.io: real-time sports betting odds from 450+ bookmakers.
+ * Official Node.js client for Odds-API.io: real-time sports betting odds from 500+ bookmakers.
  *
  * @packageDocumentation
  */
