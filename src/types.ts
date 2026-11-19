@@ -566,7 +566,6 @@ export interface SgpBookmaker {
   name: string;
   sports: string[];
   maxLegs: number;
-  prebuilt: boolean;
   /** The region the parlay price applies to, e.g. `US-NJ` or `AT`. */
   jurisdiction: string;
   /** `paused`: quotes are switched off for now. `degraded`: the status cannot be checked right now. */
