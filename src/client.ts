@@ -834,7 +834,9 @@ export class OddsAPIClient {
 
   /**
    * The legs of one pre-match event that can go into a parlay, with a `legId`
-   * for each and whether each bookmaker can combine it.
+   * for each and whether each bookmaker can combine it. `bookmakers` in the
+   * response says, per requested bookmaker, whether its legs could be checked:
+   * when its `status` is not `ok`, every leg reads `eligible: false` there.
    *
    * @example
    * ```typescript
@@ -851,7 +853,9 @@ export class OddsAPIClient {
 
   /**
    * Quote 2 to 10 legs as a same game parlay at each bookmaker. Every requested
-   * bookmaker gets one entry in `quotes`; check `status` and `nextAction`.
+   * bookmaker gets one entry in `quotes`, in request order. Branch on `status`
+   * and `nextAction`; `reason` is a sentence for display. A quote can take up to
+   * 8 seconds, and at most 2 run at once per account (a third gets a 429).
    *
    * @example
    * ```typescript
