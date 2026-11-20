@@ -2,6 +2,7 @@ import type { Clock, CommaList, EventStatus, Market, MarketName, Score } from '.
 import { OddsAPIError } from './errors.js';
 
 const DEFAULT_WS_URL = 'wss://api.odds-api.io/v3/ws';
+const MAX_TIMER_DELAY = 2 ** 31 - 1;
 
 export type WsChannel = 'odds' | 'scores' | 'status';
 
@@ -448,6 +449,7 @@ export class OddsWebSocket {
       this.emit('close', { code, reason, willReconnect: false });
       const error =
         fatal ??
+        (!reconnect ? refused : undefined) ??
         (reconnect
           ? new OddsWebSocketError(
               `Gave up after ${this.attempts} reconnect attempts (last ${
@@ -485,7 +487,7 @@ export class OddsWebSocket {
     if (code === 1012) return jitter(Math.min(initial, 1000));
     const backoff = Math.min(max, initial * 2 ** (this.attempts - 1));
     if (code === 1013) return jitter(Math.max(backoff, 3000));
-    return jitter(Math.max(backoff, this.retryAfterMs ?? 0));
+    return Math.min(MAX_TIMER_DELAY, jitter(Math.max(backoff, this.retryAfterMs ?? 0)));
   }
 
   private fail(error: Error): void {

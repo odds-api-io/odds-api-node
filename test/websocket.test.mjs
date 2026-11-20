@@ -270,6 +270,29 @@ describe('OddsWebSocket', () => {
     await assert.rejects(p, (err) => err.code === 503 && /Gave up after 1 reconnect attempts \(last handshake refused with HTTP 503\)/.test(err.message));
   });
 
+  test('with reconnect off, a refused 503 rejects with its HTTP status', async () => {
+    FakeSocket.reset();
+    const ws = new OddsWebSocket({ apiKey: 'secret', markets: 'ML', WebSocket: FakeWsSocket, reconnect: false });
+    ws.on('error', () => {});
+    const p = ws.connect();
+    await tick();
+    FakeSocket.last().refuse(503);
+    await assert.rejects(p, (err) => err instanceof OddsWebSocketError && err.code === 503 && err.status === 503);
+  });
+
+  test('a huge Retry-After stays within the timer limit', async () => {
+    FakeSocket.reset();
+    const ws = new OddsWebSocket({ apiKey: 'secret', markets: 'ML', WebSocket: FakeWsSocket });
+    const reconnecting = [];
+    ws.on('reconnecting', (i) => reconnecting.push(i));
+    ws.connect().catch(() => {});
+    await tick();
+    FakeSocket.last().refuse(503, { 'retry-after': '2592000' });
+    await tick();
+    assert.equal(reconnecting[0].delay, 2 ** 31 - 1);
+    ws.close();
+  });
+
   test('network errors are retried', async () => {
     const ws = feed();
     const reconnecting = [];
