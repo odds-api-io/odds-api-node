@@ -2,12 +2,15 @@ import type { Clock, CommaList, EventStatus, Market, MarketName, Score } from '.
 import { OddsAPIError } from './errors.js';
 
 const DEFAULT_WS_URL = 'wss://api.odds-api.io/v3/ws';
+const MAX_TIMER_DELAY = 2 ** 31 - 1;
 
 export type WsChannel = 'odds' | 'scores' | 'status';
 
 /** The subset of the WebSocket API the helper uses; `ws` and the browser/Node global both fit. */
 export interface WebSocketLike {
   readyState: number;
+  /** Present on `ws` sockets; used to read the status and Retry-After of a refused handshake. */
+  on?: (event: string, listener: (...args: any[]) => void) => unknown;
   onopen: ((event: any) => void) | null;
   onmessage: ((event: { data: unknown }) => void) | null;
   onerror: ((event: any) => void) | null;
@@ -181,6 +184,20 @@ function decode(data: unknown): string {
   return String(data);
 }
 
+/** 429 and 5xx (a server restarting or draining) are worth retrying; other refused handshakes are not. */
+function isRetryableStatus(status: number | undefined): boolean {
+  return status === 429 || (status !== undefined && status >= 500 && status < 600);
+}
+
+function parseRetryAfter(value: unknown): number | undefined {
+  const text = Array.isArray(value) ? value[0] : value;
+  if (typeof text !== 'string' || !text.trim()) return undefined;
+  const seconds = Number(text);
+  if (Number.isFinite(seconds)) return seconds >= 0 ? seconds * 1000 : undefined;
+  const date = Date.parse(text);
+  return Number.isNaN(date) ? undefined : Math.max(0, date - Date.now());
+}
+
 async function loadDefaultWebSocket(): Promise<WebSocketConstructor> {
   const moduleName = 'ws';
   try {
@@ -221,6 +238,7 @@ export class OddsWebSocket {
   private resolveOpen?: () => void;
   private rejectOpen?: (error: Error) => void;
   private handshakeError?: OddsWebSocketError;
+  private retryAfterMs?: number;
   private socketOpened = false;
 
   private iterating = false;
@@ -328,8 +346,19 @@ export class OddsWebSocket {
     this.ctor ??= this.options.WebSocket ?? (await loadDefaultWebSocket());
     if (this.stopped) return;
     this.handshakeError = undefined;
+    this.retryAfterMs = undefined;
     const socket = new this.ctor(this.buildUrl());
     this.socket = socket;
+
+    if (typeof socket.on === 'function') {
+      socket.on('unexpected-response', (_req: unknown, res: any) => {
+        if (socket !== this.socket) return;
+        this.handshakeError = this.handshakeFailure(Number(res?.statusCode));
+        this.retryAfterMs = parseRetryAfter(res?.headers?.['retry-after']);
+        res?.resume?.();
+        socket.close();
+      });
+    }
 
     this.socketOpened = false;
     socket.onopen = () => {
@@ -347,7 +376,7 @@ export class OddsWebSocket {
     };
 
     socket.onerror = (event: any) => {
-      if (socket !== this.socket || this.stopped) return;
+      if (socket !== this.socket || this.stopped || this.handshakeError) return;
       const text: string = event?.message ?? event?.error?.message ?? '';
       const status = /Unexpected server response: (\d{3})/.exec(text);
       if (status) this.handshakeError = this.handshakeFailure(Number(status[1]));
@@ -408,11 +437,11 @@ export class OddsWebSocket {
       return;
     }
 
-    let fatal: OddsWebSocketError | undefined = this.handshakeError;
+    const refused = this.handshakeError;
+    let fatal: OddsWebSocketError | undefined = refused && !isRetryableStatus(refused.code) ? refused : undefined;
     if (!fatal && code === 1008 && /newer connection/i.test(reason)) {
       fatal = new OddsWebSocketError(`Connection replaced by a newer one on this key (${reason})`, code);
     }
-    if (fatal && fatal.code === 429) fatal = undefined;
 
     const reconnect = this.options.reconnect !== false;
     const max = this.options.maxReconnectAttempts ?? Infinity;
@@ -420,10 +449,13 @@ export class OddsWebSocket {
       this.emit('close', { code, reason, willReconnect: false });
       const error =
         fatal ??
+        (!reconnect ? refused : undefined) ??
         (reconnect
           ? new OddsWebSocketError(
-              `Gave up after ${this.attempts} reconnect attempts (last close ${code}${reason ? ` ${reason}` : ''})`,
-              code
+              `Gave up after ${this.attempts} reconnect attempts (last ${
+                refused ? `handshake refused with HTTP ${refused.code}` : `close ${code}${reason ? ` ${reason}` : ''}`
+              })`,
+              refused?.code ?? code
             )
           : code === 1000
             ? undefined
@@ -455,7 +487,7 @@ export class OddsWebSocket {
     if (code === 1012) return jitter(Math.min(initial, 1000));
     const backoff = Math.min(max, initial * 2 ** (this.attempts - 1));
     if (code === 1013) return jitter(Math.max(backoff, 3000));
-    return jitter(backoff);
+    return Math.min(MAX_TIMER_DELAY, jitter(Math.max(backoff, this.retryAfterMs ?? 0)));
   }
 
   private fail(error: Error): void {

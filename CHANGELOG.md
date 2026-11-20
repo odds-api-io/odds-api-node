@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.2 (2026-11-20)
+
+### Fixed
+- `OddsWebSocket` no longer stops for good when a reconnect handshake is refused with HTTP 500, 502, 503 or 504, such as the 503 the server sends while it restarts. These are retried with backoff like 429, and the wait honors the `Retry-After` header when the `ws` package is used. 400, 401, 403 and 426 stay fatal. After `maxReconnectAttempts` the error names the last HTTP status.
+
 ## 1.6.1 (2026-11-20)
 
 ### Docs
