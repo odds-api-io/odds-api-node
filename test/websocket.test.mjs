@@ -1,5 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import { WebSocketServer } from 'ws';
 import { OddsWebSocket, OddsWebSocketError } from 'odds-api-io';
 
 /** A scripted stand-in for a WebSocket: tests drive open, messages and closes. */
@@ -35,6 +37,31 @@ class FakeSocket {
   close(code = 1000, reason = '') {
     this.readyState = 3;
     queueMicrotask(() => this.onclose?.({ code, reason }));
+  }
+}
+
+/** Mimics `ws`: a refused handshake is reported through 'unexpected-response' with the response headers. */
+class FakeWsSocket extends FakeSocket {
+  constructor(url) {
+    super(url);
+    this.handlers = {};
+  }
+  on(event, listener) {
+    this.handlers[event] = listener;
+  }
+  refuse(statusCode, headers = {}) {
+    let resumed = false;
+    this.handlers['unexpected-response']?.({}, { statusCode, headers, resume: () => (resumed = true) });
+    this.resumed = resumed;
+  }
+  close(code = 1006, reason = '') {
+    if (this.readyState === 0) {
+      this.readyState = 3;
+      this.onerror?.({ message: 'WebSocket was closed before the connection was established' });
+      queueMicrotask(() => this.onclose?.({ code: 1006, reason: '' }));
+      return;
+    }
+    super.close(code, reason);
   }
 }
 
@@ -179,6 +206,85 @@ describe('OddsWebSocket', () => {
     await assert.rejects(p, (err) => err.code === 401);
   });
 
+  for (const status of [500, 502, 503, 504]) {
+    test(`a ${status} handshake is retried with backoff`, async () => {
+      const ws = feed();
+      const errors = [];
+      const reconnecting = [];
+      ws.on('error', (e) => errors.push(e));
+      ws.on('reconnecting', (i) => reconnecting.push(i));
+      const p = ws.connect();
+      await tick();
+      FakeSocket.last().fail(`Unexpected server response: ${status}`);
+      await tick(40);
+      assert.equal(FakeSocket.instances.length, 2);
+      assert.equal(reconnecting.length, 1);
+      assert.equal(errors.length, 0);
+      FakeSocket.last().open();
+      await p;
+      ws.close();
+    });
+  }
+
+  test('a 503 with Retry-After waits at least that long', async () => {
+    FakeSocket.reset();
+    const ws = new OddsWebSocket({ apiKey: 'secret', markets: 'ML', WebSocket: FakeWsSocket, initialReconnectDelay: 5 });
+    const errors = [];
+    const reconnecting = [];
+    ws.on('error', (e) => errors.push(e));
+    ws.on('reconnecting', (i) => reconnecting.push(i));
+    ws.connect().catch(() => {});
+    await tick();
+    const first = FakeSocket.last();
+    first.refuse(503, { 'retry-after': '2' });
+    await tick();
+    assert.equal(first.resumed, true);
+    assert.equal(reconnecting.length, 1);
+    assert.ok(reconnecting[0].delay >= 2000 && reconnecting[0].delay <= 2400, `delay ${reconnecting[0].delay}`);
+    assert.equal(errors.length, 0);
+    ws.close();
+  });
+
+  test('a 403 reported through unexpected-response stays fatal', async () => {
+    FakeSocket.reset();
+    const ws = new OddsWebSocket({ apiKey: 'secret', markets: 'ML', WebSocket: FakeWsSocket, initialReconnectDelay: 5 });
+    const errors = [];
+    ws.on('error', (e) => errors.push(e));
+    const p = ws.connect();
+    await tick();
+    FakeSocket.last().refuse(403);
+    await assert.rejects(p, (err) => err instanceof OddsWebSocketError && err.code === 403 && /no WebSocket access/.test(err.message));
+    await tick(40);
+    assert.equal(FakeSocket.instances.length, 1);
+    assert.equal(errors.length, 1);
+  });
+
+  test('gives up on a refused handshake after maxReconnectAttempts and names the status', async () => {
+    const ws = feed({ maxReconnectAttempts: 1 });
+    ws.on('error', () => {});
+    const p = ws.connect();
+    await tick();
+    FakeSocket.last().fail('Unexpected server response: 503');
+    await tick(40);
+    FakeSocket.last().fail('Unexpected server response: 503');
+    await assert.rejects(p, (err) => err.code === 503 && /Gave up after 1 reconnect attempts \(last handshake refused with HTTP 503\)/.test(err.message));
+  });
+
+  test('network errors are retried', async () => {
+    const ws = feed();
+    const reconnecting = [];
+    ws.on('error', () => {});
+    ws.on('reconnecting', (i) => reconnecting.push(i));
+    const p = ws.connect();
+    await tick();
+    FakeSocket.last().fail('connect ECONNREFUSED 127.0.0.1:443');
+    await tick(40);
+    assert.equal(reconnecting.length, 1);
+    FakeSocket.last().open();
+    await p;
+    ws.close();
+  });
+
   test('gives up after maxReconnectAttempts', async () => {
     const ws = feed({ maxReconnectAttempts: 2 });
     ws.on('error', () => {});
@@ -238,5 +344,64 @@ describe('OddsWebSocket', () => {
     FakeSocket.last().open();
     FakeSocket.last().serverClose(1011, 'internal error');
     await assert.rejects(loop, (err) => err instanceof OddsWebSocketError && err.code === 1011);
+  });
+});
+
+describe('OddsWebSocket with the ws package', () => {
+  async function server(refusals) {
+    const wss = new WebSocketServer({ noServer: true, perMessageDeflate: true });
+    const http = createServer();
+    let upgrades = 0;
+    http.on('upgrade', (req, socket, head) => {
+      const refusal = refusals[upgrades++];
+      if (refusal) {
+        const headers = Object.entries(refusal.headers ?? {}).map(([k, v]) => `${k}: ${v}\r\n`).join('');
+        socket.end(`HTTP/1.1 ${refusal.status} Refused\r\n${headers}Content-Length: 0\r\nConnection: close\r\n\r\n`);
+        return;
+      }
+      wss.handleUpgrade(req, socket, head, (client) => client.send(JSON.stringify(welcome)));
+    });
+    await new Promise((r) => http.listen(0, '127.0.0.1', r));
+    return {
+      url: `ws://127.0.0.1:${http.address().port}/v3/ws`,
+      upgrades: () => upgrades,
+      stop: () => {
+        for (const c of wss.clients) c.terminate();
+        wss.close();
+        http.close();
+      },
+    };
+  }
+
+  test('a draining 503 with Retry-After reconnects after the advised wait', async (t) => {
+    const srv = await server([{ status: 503, headers: { 'Retry-After': '1' } }]);
+    t.after(srv.stop);
+    const ws = new OddsWebSocket({ apiKey: 'k', markets: 'ML', url: srv.url, initialReconnectDelay: 5 });
+    const errors = [];
+    const reconnecting = [];
+    ws.on('error', (e) => errors.push(e));
+    ws.on('reconnecting', (i) => reconnecting.push(i));
+    const welcomed = new Promise((r) => ws.once('welcome', r));
+    const started = Date.now();
+    await ws.connect();
+    await welcomed;
+    assert.ok(Date.now() - started >= 1000);
+    assert.equal(srv.upgrades(), 2);
+    assert.equal(reconnecting.length, 1);
+    assert.ok(reconnecting[0].delay >= 1000);
+    assert.deepEqual(errors, []);
+    ws.close();
+  });
+
+  test('a 401 is fatal', async (t) => {
+    const srv = await server([{ status: 401 }]);
+    t.after(srv.stop);
+    const ws = new OddsWebSocket({ apiKey: 'k', markets: 'ML', url: srv.url, initialReconnectDelay: 5 });
+    const errors = [];
+    ws.on('error', (e) => errors.push(e));
+    await assert.rejects(ws.connect(), (err) => err instanceof OddsWebSocketError && err.code === 401);
+    await tick(50);
+    assert.equal(srv.upgrades(), 1);
+    assert.equal(errors.length, 1);
   });
 });

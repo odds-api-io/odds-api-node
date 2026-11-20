@@ -191,7 +191,7 @@ for await (const msg of feed) {
 
 Events: `open`, `message`, one per message type (`welcome`, `created`, `updated`, `deleted`, `no_markets`, `score`, `status`, `resync_required`, `replay_complete`), `reconnecting`, `close` and `error`. `feed.close()` stops it; `feed.lastSeq` is the resume point to persist.
 
-Close codes: 1012 (server restart) reconnects at once, 1013 (cooldown) waits at least 3 seconds, 1008 because a newer connection replaced this one stops instead of fighting it (two connections per key). A refused handshake (401, 403, 426) is not retried and rejects `connect()` / the iterator with `OddsWebSocketError`. Options: `reconnect` (default true), `maxReconnectAttempts`, `initialReconnectDelay`, `maxReconnectDelay`, `replayComplete` (default true) and `WebSocket` to pass your own implementation.
+Close codes: 1012 (server restart) reconnects at once, 1013 (cooldown) waits at least 3 seconds, 1008 because a newer connection replaced this one stops instead of fighting it (two connections per key). A refused handshake with 400, 401, 403 or 426 is not retried and rejects `connect()` / the iterator with `OddsWebSocketError`. A 429 or 5xx (for example the 503 a server sends while it restarts) is retried with backoff, waiting at least as long as its `Retry-After` header asks (the header is read with the `ws` package). Options: `reconnect` (default true), `maxReconnectAttempts`, `initialReconnectDelay`, `maxReconnectDelay`, `replayComplete` (default true) and `WebSocket` to pass your own implementation.
 
 ## Historical odds and closing lines
 
@@ -482,5 +482,5 @@ This is the official SDK for Odds-API.io. This tool is for informational purpose
 If you use this package in research or a publication, please cite it. Citation metadata is in [CITATION.cff](CITATION.cff) (GitHub renders a "Cite this repository" button from it) and Zenodo metadata is in `.zenodo.json`.
 
 ```
-Outlier AS. odds-api-io: Official Node.js SDK for Odds-API.io (version 1.6.1). https://github.com/odds-api-io/odds-api-node
+Outlier AS. odds-api-io: Official Node.js SDK for Odds-API.io (version 1.6.2). https://github.com/odds-api-io/odds-api-node
 ```
