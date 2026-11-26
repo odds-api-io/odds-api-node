@@ -273,21 +273,22 @@ export class OddsAPIClient {
 
   private async toError(response: Response, rateLimit?: RateLimitInfo): Promise<OddsAPIError> {
     const status = response.status;
-    let body = '';
+    let raw = '';
     try {
-      body = this.redact(await response.text());
+      raw = await response.text();
     } catch {
-      body = '';
+      raw = '';
     }
-    let message = body.trim() || response.statusText || `HTTP ${status}`;
+    let message = raw.trim() || response.statusText || `HTTP ${status}`;
     try {
-      const parsed = JSON.parse(body);
+      const parsed = JSON.parse(raw);
       if (parsed && typeof parsed.error === 'string') message = parsed.error;
       else if (parsed && typeof parsed.message === 'string') message = parsed.message;
     } catch {
       // not JSON: keep the raw text
     }
-    const details = { status, body, rateLimit };
+    message = this.redact(message);
+    const details = { status, body: this.redact(raw), rateLimit };
 
     switch (status) {
       case 400:

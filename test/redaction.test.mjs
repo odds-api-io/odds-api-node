@@ -219,3 +219,13 @@ describe('API key redaction in error names and symbols', () => {
     assert.match(error.cause.name, /apiKey=\*\*\*/);
   });
 });
+
+test('the server message is still extracted when the body has an apiKey field', async () => {
+  const fetch = async () =>
+    new Response(JSON.stringify({ error: 'Invalid API key', apiKey: null }), {
+      status: 401,
+      headers: { 'content-type': 'application/json' },
+    });
+  const error = await client(fetch).getEvents({ sport: 'football' }).catch((e) => e);
+  assert.equal(error.message, 'Invalid API key');
+});
