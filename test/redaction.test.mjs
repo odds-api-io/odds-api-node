@@ -59,7 +59,7 @@ describe('API key redaction', () => {
     const error = await client(fetch).getEvents({ sport: 'football' }).catch((e) => e);
     assert.ok(error instanceof NetworkError);
     assert.match(error.message, /apiKey=\*\*\*/);
-    assert.ok(error.cause instanceof TypeError);
+    assert.equal(error.cause.name, 'TypeError');
     assert.equal(error.cause.cause.code, 'ECONNREFUSED');
     assertNoKey(error);
   });
@@ -130,5 +130,62 @@ describe('API key redaction', () => {
     assert.ok(errors.length > 0);
     for (const error of errors) assertNoKey(error);
     feed.close();
+  });
+});
+
+describe('API key redaction in causes', () => {
+  test('plain-object and URL causes are masked', async () => {
+    const fetch = async (url) => {
+      const error = new TypeError('fetch failed');
+      error.cause = { url, request: { href: new URL(url) }, nested: [{ deep: url }] };
+      error.request = { url };
+      throw error;
+    };
+    const error = await client(fetch).getEvents({ sport: 'football' }).catch((e) => e);
+    assert.ok(error instanceof NetworkError);
+    assert.match(error.cause.cause.url, /apiKey=\*\*\*/);
+    assertNoKey(error);
+  });
+
+  test('a very deep cause chain is cut with a placeholder, never left unmasked', async () => {
+    const fetch = async (url) => {
+      let error = new Error(`root ${url}`);
+      for (let i = 0; i < 30; i++) {
+        const outer = new Error(`level ${i}`);
+        outer.cause = error;
+        error = outer;
+      }
+      throw error;
+    };
+    const error = await client(fetch).getEvents({ sport: 'football' }).catch((e) => e);
+    assertNoKey(error);
+    let link = error;
+    for (let i = 0; i < 60 && link && typeof link === 'object'; i++) link = link.cause;
+    assert.ok(link === undefined || typeof link === 'string');
+  });
+
+  test('cyclic causes do not hang', async () => {
+    const fetch = async (url) => {
+      const a = new Error(`a ${url}`);
+      const b = new Error('b');
+      a.cause = b;
+      b.cause = a;
+      throw a;
+    };
+    const error = await client(fetch).getEvents({ sport: 'football' }).catch((e) => e);
+    assertNoKey(error);
+  });
+
+  test('a native AbortError cause stays readable', async () => {
+    const fetch = (_url, init) =>
+      new Promise((_resolve, reject) => {
+        init.signal.addEventListener('abort', () => reject(init.signal.reason));
+      });
+    const error = await client(fetch, { timeout: 10 }).getEvents({ sport: 'football' }).catch((e) => e);
+    assert.ok(error instanceof TimeoutError);
+    assert.equal(typeof String(error.cause), 'string');
+    assert.equal(error.cause.name, 'AbortError');
+    assert.equal(typeof error.cause.message, 'string');
+    assertNoKey(error);
   });
 });
