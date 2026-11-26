@@ -189,3 +189,19 @@ describe('API key redaction in causes', () => {
     assertNoKey(error);
   });
 });
+
+describe('API key redaction in structured causes', () => {
+  test('property names and credential fields are masked', async () => {
+    const fetch = async (url) => {
+      const error = new TypeError('fetch failed');
+      error.requests = { [url]: 'failed' };
+      error.request = { headers: { Authorization: 'Bearer proxy-private-token', Accept: 'application/json' } };
+      throw error;
+    };
+    const error = await client(fetch).getEvents({ sport: 'football' }).catch((e) => e);
+    assertNoKey(error);
+    assert.equal(error.cause.request.headers.Authorization, '***');
+    assert.equal(error.cause.request.headers.Accept, 'application/json');
+    assert.ok(!inspect(error, { depth: 20 }).includes('proxy-private-token'));
+  });
+});

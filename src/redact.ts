@@ -8,6 +8,8 @@ const REDACTED = '***';
 const SECRET_PARAM =
   /(^|[^A-Za-z0-9_])(api[_-]?key|access[_-]?token|auth[_-]?token|token|secret|password|key)(=|%3D)[^&#\s'"<>()[\],;]+/gi;
 const SECRET_HEADER = /((?:x-)?api[_-]?key|authorization)(['"]?\s*:\s*['"]?)(?:bearer\s+|basic\s+)?[^'"\s,}&]+/gi;
+const SECRET_FIELD =
+  /^(?:x-)?(?:api[_-]?key|access[_-]?token|auth[_-]?token|token|secret|password|authorization|proxy-authorization)$/i;
 const MAX_DEPTH = 8;
 const TRUNCATED = '[truncated]';
 
@@ -69,8 +71,15 @@ class Redactor {
     }
     const out: Record<string, unknown> = {};
     this.seen.set(value, out);
-    for (const key of Object.keys(value)) out[key] = this.value(read(value, key), depth + 1);
+    for (const key of Object.keys(value)) this.copyField(out, value, key, depth);
     return out;
+  }
+
+  private copyField(target: object, source: object, key: string, depth: number): void {
+    const value = read(source, key);
+    const name = redactSecrets(key, this.secrets);
+    (target as Record<string, unknown>)[name] =
+      SECRET_FIELD.test(key) && value ? REDACTED : this.value(value, depth + 1);
   }
 
   /** A plain `Error` copy: same name, masked message, stack and properties, masked `cause` chain. */
@@ -92,7 +101,7 @@ class Redactor {
     }
     for (const key of Object.keys(error)) {
       if (key in copy) continue;
-      (copy as any)[key] = this.value(read(error, key), depth + 1);
+      this.copyField(copy, error, key, depth);
     }
     const cause = read(error, 'cause');
     if (cause !== undefined) {
