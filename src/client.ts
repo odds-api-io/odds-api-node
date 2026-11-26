@@ -68,6 +68,7 @@ import {
   TimeoutError,
   NetworkError,
 } from './errors.js';
+import { redactError, redactSecrets } from './redact.js';
 import { VERSION } from './version.js';
 
 const DEFAULT_BASE_URL = 'https://api.odds-api.io/v3';
@@ -208,10 +209,11 @@ export class OddsAPIClient {
         response = await doFetch(url.toString(), { method, headers, body, signal: controller.signal });
       } catch (error: any) {
         clearTimeout(timeoutId);
+        const cause = redactError(error, [this.apiKey]);
         const err =
           error?.name === 'AbortError'
-            ? new TimeoutError(`Request timeout after ${this.timeout}ms`)
-            : new NetworkError(`Network request failed: ${error?.message ?? error}`);
+            ? new TimeoutError(`Request timeout after ${this.timeout}ms`, { cause })
+            : new NetworkError(this.redact(`Network request failed: ${error?.message ?? error}`), { cause });
         if (attempt < retries) {
           await sleep(this.backoff(attempt));
           continue;
@@ -237,12 +239,17 @@ export class OddsAPIClient {
         throw error;
       } catch (error: any) {
         if (error instanceof OddsAPIError) throw error;
-        if (error?.name === 'AbortError') throw new TimeoutError(`Request timeout after ${this.timeout}ms`);
-        throw new NetworkError(`Failed to read response: ${error?.message ?? error}`);
+        const cause = redactError(error, [this.apiKey]);
+        if (error?.name === 'AbortError') throw new TimeoutError(`Request timeout after ${this.timeout}ms`, { cause });
+        throw new NetworkError(this.redact(`Failed to read response: ${error?.message ?? error}`), { cause });
       } finally {
         clearTimeout(timeoutId);
       }
     }
+  }
+
+  private redact(text: string): string {
+    return redactSecrets(text, [this.apiKey]);
   }
 
   private backoff(attempt: number): number {
@@ -268,7 +275,7 @@ export class OddsAPIClient {
     const status = response.status;
     let body = '';
     try {
-      body = await response.text();
+      body = this.redact(await response.text());
     } catch {
       body = '';
     }

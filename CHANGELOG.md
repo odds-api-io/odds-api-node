@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.3 (2026-11-26)
+
+### Security
+- Errors no longer contain the API key. The key is sent as the `apiKey` query parameter. In 1.6.2 and earlier, a `fetch` implementation that quotes the request URL in its errors (such as `node-fetch`), an error body that echoes the URL, or a WebSocket that could not be created (for example an invalid `url` with `ws`) put the full URL, key included, into the SDK error message and the error passed to `error` listeners. The key, and any key-like query parameter or header, is now masked as `***` in `message`, `stack` and `body`. `NetworkError`, `TimeoutError` and `OddsWebSocketError` now carry the underlying error as `cause`, with the key masked through the whole `cause` chain. If you have shared such an error from an older version, regenerate the key in your dashboard settings at https://odds-api.io/dashboard/settings.
+
 ## 1.6.2 (2026-11-20)
 
 ### Fixed

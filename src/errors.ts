@@ -5,6 +5,8 @@ export interface OddsAPIErrorDetails {
   /** The raw response body. */
   body?: string;
   rateLimit?: RateLimitInfo;
+  /** The underlying error, with the API key masked. */
+  cause?: unknown;
 }
 
 /** Base class for every error the SDK throws. `message` is the server's own error text when there is one. */
@@ -12,6 +14,7 @@ export class OddsAPIError extends Error {
   readonly status?: number;
   readonly body?: string;
   readonly rateLimit?: RateLimitInfo;
+  declare readonly cause?: unknown;
 
   constructor(message: string, details: OddsAPIErrorDetails = {}) {
     super(message);
@@ -19,6 +22,9 @@ export class OddsAPIError extends Error {
     this.status = details.status;
     this.body = details.body;
     this.rateLimit = details.rateLimit;
+    if (details.cause !== undefined) {
+      Object.defineProperty(this, 'cause', { value: details.cause, writable: true, configurable: true });
+    }
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
@@ -97,16 +103,16 @@ export class ServerError extends OddsAPIError {
 
 /** The request took longer than the configured timeout. */
 export class TimeoutError extends OddsAPIError {
-  constructor(message = 'Request timeout') {
-    super(message);
+  constructor(message = 'Request timeout', details: OddsAPIErrorDetails = {}) {
+    super(message, details);
     this.name = 'TimeoutError';
   }
 }
 
 /** The request never reached the server or the connection failed. */
 export class NetworkError extends OddsAPIError {
-  constructor(message: string) {
-    super(message);
+  constructor(message: string, details: OddsAPIErrorDetails = {}) {
+    super(message, details);
     this.name = 'NetworkError';
   }
 }
