@@ -1,5 +1,6 @@
 import type { Clock, CommaList, EventStatus, Market, MarketName, Score } from './types.js';
 import { OddsAPIError } from './errors.js';
+import { redactError, redactSecrets } from './redact.js';
 
 const DEFAULT_WS_URL = 'wss://api.odds-api.io/v3/ws';
 const MAX_TIMER_DELAY = 2 ** 31 - 1;
@@ -162,8 +163,8 @@ export class OddsWebSocketError extends OddsAPIError {
   /** WebSocket close code, or the HTTP status of a refused handshake. */
   readonly code?: number;
 
-  constructor(message: string, code?: number) {
-    super(message, { status: code !== undefined && code < 1000 ? code : undefined });
+  constructor(message: string, code?: number, cause?: unknown) {
+    super(message, { status: code !== undefined && code < 1000 ? code : undefined, cause });
     this.name = 'OddsWebSocketError';
     this.code = code;
   }
@@ -380,7 +381,7 @@ export class OddsWebSocket {
       const text: string = event?.message ?? event?.error?.message ?? '';
       const status = /Unexpected server response: (\d{3})/.exec(text);
       if (status) this.handshakeError = this.handshakeFailure(Number(status[1]));
-      else this.emit('error', new OddsWebSocketError(text || 'WebSocket error'));
+      else this.emit('error', new OddsWebSocketError(redactSecrets(text, [this.options.apiKey]) || 'WebSocket error'));
     };
 
     socket.onclose = (event) => {
@@ -490,7 +491,8 @@ export class OddsWebSocket {
     return Math.min(MAX_TIMER_DELAY, jitter(Math.max(backoff, this.retryAfterMs ?? 0)));
   }
 
-  private fail(error: Error): void {
+  private fail(raw: Error): void {
+    const error = this.safeError(raw);
     this.stopped = true;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.rejectOpen?.(error);
@@ -498,6 +500,13 @@ export class OddsWebSocket {
     this.rejectOpen = undefined;
     this.emit('error', error);
     this.finish(error);
+  }
+
+  private safeError(error: Error): Error {
+    const secrets = [this.options.apiKey];
+    if (error instanceof OddsAPIError) return error;
+    const message = redactSecrets(error?.message ?? String(error), secrets);
+    return new OddsWebSocketError(message, undefined, redactError(error, secrets));
   }
 
   private finish(error?: Error): void {
