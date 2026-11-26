@@ -54,6 +54,7 @@ class Redactor {
 
   value(value: unknown, depth: number): unknown {
     if (typeof value === 'string') return redactSecrets(value, this.secrets);
+    if (typeof value === 'symbol') return redactSecrets(String(value), this.secrets);
     if (value === null || typeof value !== 'object') return typeof value === 'function' ? undefined : value;
     if (depth > MAX_DEPTH) return TRUNCATED;
     if (this.seen.has(value)) return this.seen.get(value);
@@ -88,7 +89,7 @@ class Redactor {
     const copy = new Error(redactSecrets(typeof message === 'string' ? message : '', this.secrets));
     this.seen.set(error, copy);
     const name = read(error, 'name');
-    if (typeof name === 'string') copy.name = name;
+    if (typeof name === 'string') copy.name = redactSecrets(name, this.secrets);
     const stack = read(error, 'stack');
     Object.defineProperty(copy, 'stack', {
       value: typeof stack === 'string' ? redactSecrets(stack, this.secrets) : undefined,

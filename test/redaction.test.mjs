@@ -205,3 +205,17 @@ describe('API key redaction in structured causes', () => {
     assert.ok(!inspect(error, { depth: 20 }).includes('proxy-private-token'));
   });
 });
+
+describe('API key redaction in error names and symbols', () => {
+  test('an error name or symbol holding the URL is masked', async () => {
+    const fetch = async (url) => {
+      const error = new Error('failed');
+      error.name = `FetchError(${url})`;
+      error.context = Symbol(url);
+      throw error;
+    };
+    const error = await client(fetch).getEvents({ sport: 'football' }).catch((e) => e);
+    assertNoKey(error);
+    assert.match(error.cause.name, /apiKey=\*\*\*/);
+  });
+});
